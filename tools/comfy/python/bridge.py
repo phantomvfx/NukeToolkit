@@ -27,7 +27,7 @@ class ComfyBridge:
 
         return render_dir
 
-    def render_inputs(self, node):
+    def render_inputs(self, node, first=None, last=None):
         """
         Renders connected inputs to EXR files.
         Input 0: Source — the EXR to send to ComfyUI
@@ -41,7 +41,11 @@ class ComfyBridge:
             try:
                 upstream = node.input(idx)
                 if upstream:
-                    filename = f"comfy_input_{idx}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.exr"
+                    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                    if first is not None and last is not None:
+                        filename = f"comfy_input_{idx}_{timestamp}.%04d.exr"
+                    else:
+                        filename = f"comfy_input_{idx}_{timestamp}.exr"
                     full_path = os.path.join(self.temp_folder, filename).replace("\\", "/")
                     w = nuke.nodes.Write(file=full_path, file_type="exr")
                     w.setInput(0, upstream)
@@ -62,8 +66,12 @@ class ComfyBridge:
                         if w.knob(k):
                             w.knob(k).setValue(v)
 
-                    cur_frame = nuke.frame()
-                    nuke.execute(w, cur_frame, cur_frame)
+                    if first is not None and last is not None:
+                        nuke.execute(w, first, last)
+                    else:
+                        cur_frame = nuke.frame()
+                        nuke.execute(w, cur_frame, cur_frame)
+                        
                     nuke.delete(w)
                     rendered_files[idx] = full_path
             except Exception as e:
@@ -88,6 +96,42 @@ class ComfyBridge:
         except Exception as e:
             node.knob('status').setValue(f"Error: {str(e)}")
             nuke.message(f"ComfyBridge Error: {str(e)}")
+            return False
+
+    def generate_sequence(self, node):
+        """
+        Main execution flow for sequence: Render Sequence -> Pass to Polling system
+        """
+        try:
+            from NukeComfy.python.polling import start_comfy_sequence_process
+            
+            root = nuke.root()
+            default_first = int(root['first_frame'].value())
+            default_last = int(root['last_frame'].value())
+            
+            p = nuke.Panel("Generate Sequence")
+            p.addExpressionInput("Start Frame", default_first)
+            p.addExpressionInput("End Frame", default_last)
+            if not p.show():
+                return False
+                
+            first = int(p.value("Start Frame"))
+            last = int(p.value("End Frame"))
+            
+            node.knob('status').setValue(f"Rendering {first}-{last}...")
+            
+            input_files = self.render_inputs(node, first=first, last=last)
+            if 0 not in input_files:
+                node.knob('status').setValue("Error: No source input connected")
+                nuke.message("Sequence generation requires a source EXR connected.")
+                return False
+                
+            start_comfy_sequence_process(node, input_files, first, last)
+            return True
+            
+        except Exception as e:
+            node.knob('status').setValue(f"Error: {str(e)}")
+            nuke.message(f"Sequence Error: {str(e)}")
             return False
 
 bridge = ComfyBridge()

@@ -199,3 +199,118 @@ def start_comfy_process(node, input_files):
     thread.error.connect(lambda _: _cleanup_thread(thread))
     
     thread.start()
+
+import time
+import shutil
+import glob
+
+class ComfySequenceThread(QtCore.QThread):
+    finished = QtCore.Signal(str)
+    error = QtCore.Signal(str)
+
+    def __init__(self, node, input_files, first, last):
+        super().__init__()
+        self.node = node
+        self.input_files = input_files
+        self.first = first
+        self.last = last
+
+    def run(self):
+        try:
+            template_knob = self.node.knob('template')
+            template_name = template_knob.value() if template_knob else "kleinedit"
+            
+            seq_timestamp = int(time.time())
+            seq_prefix = f"sequence_result_{seq_timestamp}"
+            
+            for f in range(self.first, self.last + 1):
+                self.node.knob('status').setValue(f"Processing {f}/{self.last}...")
+                
+                # Format current frame path for Comfy input map
+                current_input = {k: str(v) % f if "%04d" in str(v) else v for k, v in self.input_files.items()}
+                
+                workflow = api_client.load_template(template_name)
+                if 'prompt' in workflow and isinstance(workflow['prompt'], dict):
+                    workflow = workflow['prompt']
+                    
+                patched_workflow = api_client.patch_workflow(workflow, self.node, current_input, frame_index=f)
+                
+                result = api_client.send_prompt(patched_workflow)
+                if not result:
+                    self.error.emit(f"Failed prompt at frame {f}")
+                    return
+                    
+                prompt_id = result.get('prompt_id')
+                
+                # Poll
+                output_data = None
+                while True:
+                    history = api_client.check_history()
+                    if prompt_id in history:
+                        entry = history[prompt_id]
+                        if entry.get('status', {}).get('status_str') == 'error':
+                            self.error.emit(f"Error on frame {f}")
+                            return
+                        output_data = entry.get('outputs', {})
+                        break
+                    self.msleep(1500)
+                    
+                # Integrate the output for this specific frame
+                output_images = []
+                for node_id, node_output in output_data.items():
+                    for img in node_output.get('images', []):
+                        output_images.append(img)
+                        
+                from NukeComfy.python.bridge import bridge
+                local_filename = f"{seq_prefix}.{f:04d}.exr"
+                save_path = os.path.join(bridge.temp_folder, local_filename).replace('\\', '/')
+                
+                if output_images:
+                    img_info = output_images[0]
+                    downloaded = api_client.download_output(img_info['filename'], img_info['subfolder'], img_info.get('type', 'output'), save_path)
+                    if not downloaded:
+                        self.error.emit(f"Failed to download frame {f}")
+                        return
+                else:
+                    # Fallback output parsing
+                    comfy_dir = os.environ.get("COMFYUI_OUTPUT_DIR", "")
+                    if not comfy_dir or not os.path.exists(comfy_dir):
+                        for cpath in [r"C:\ComfyUI\output", r"L:\ComfyUI\output", r"D:\ComfyUI\output", r"E:\ComfyUI\output"]:
+                            if os.path.exists(cpath):
+                                comfy_dir = cpath
+                                break
+                    if os.path.exists(comfy_dir):
+                        exr_files = glob.glob(os.path.join(comfy_dir, '*.exr'))
+                        if exr_files:
+                            latest_exr = max(exr_files, key=os.path.getmtime)
+                            try:
+                                shutil.copy2(latest_exr, save_path)
+                            except:
+                                pass
+            
+            # Sequence complete, emit sequence pad
+            self.finished.emit(f"{seq_prefix}.%04d.exr")
+            
+        except Exception as e:
+            self.error.emit(str(e))
+
+def start_comfy_sequence_process(node, input_files, first, last):
+    thread = ComfySequenceThread(node, input_files, first, last)
+    _active_threads.append(thread)
+    
+    def on_sequence_finished(seq_mask):
+        from NukeComfy.python.bridge import bridge
+        read_path = os.path.join(bridge.temp_folder, seq_mask).replace('\\', '/')
+        read_node = nuke.nodes.Read(file=read_path, first=first, last=last)
+        pos = node.xpos()
+        y_pos = node.ypos() + 150
+        read_node.setXYpos(pos, y_pos)
+        prompt = node.knob('prompt_pos').value() if node.knob('prompt_pos') else ""
+        read_node.knob('label').setValue(f"Sequence | {prompt[:20]}...")
+        node.knob('status').setValue("Done")
+        
+    thread.finished.connect(on_sequence_finished)
+    thread.finished.connect(lambda _: _cleanup_thread(thread))
+    thread.error.connect(lambda err: node.knob('status').setValue(f"Error: {err}"))
+    thread.error.connect(lambda _: _cleanup_thread(thread))
+    thread.start()

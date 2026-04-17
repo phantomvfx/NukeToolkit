@@ -5,6 +5,7 @@ Gizmo {
  addUserKnob {1 template l "Workflow Template"}
  template DepthAny
  addUserKnob {22 generate l Generate T "import NukeComfy.python.bridge; NukeComfy.python.bridge.bridge.generate(nuke.thisNode())" +STARTLINE}
+ addUserKnob {22 generate_seq l "Generate Sequence" T "import NukeComfy.python.bridge; NukeComfy.python.bridge.bridge.generate_sequence(nuke.thisNode())" -STARTLINE}
  addUserKnob {1 status l Status}
  status Done
 }
