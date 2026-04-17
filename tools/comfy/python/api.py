@@ -16,7 +16,7 @@ class ComfyAPIClient:
         with open(template_path, 'r') as f:
             return json.load(f)
 
-    def patch_workflow(self, workflow, node, input_files=None, frame_index=None):
+    def patch_workflow(self, workflow, node, input_files=None):
         """
         Injects Nuke data into the ComfyUI API JSON.
         Handles specific mapping for KleinEdit and other workflows.
@@ -76,14 +76,10 @@ class ComfyAPIClient:
             exr_path = input_files[0]
             if '166' in workflow:
                 workflow['166']['inputs']['image_path'] = exr_path.replace('\\', '/')
-                if frame_index is not None:
-                    workflow['166']['inputs']['frame_index'] = frame_index
             else:
                 for node_id, node_info in workflow.items():
                     if node_info.get('class_type') in ['Load EXR (ACEScg)', 'Load EXR']:
                         node_info['inputs']['image_path'] = exr_path.replace('\\', '/')
-                        if frame_index is not None:
-                            node_info['inputs']['frame_index'] = frame_index
                         break
 
         # 6. Sync SeedVR2 upscaler seed (Node 160 in KleinEdit)
