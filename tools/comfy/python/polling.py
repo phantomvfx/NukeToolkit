@@ -105,7 +105,12 @@ class ComfyResultIntegrator:
 
         if not output_images:
             # Fallback for custom nodes like 'Save EXR (ACEScg)' that don't report output via standard API
-            comfy_dir = os.environ.get("COMFYUI_OUTPUT_DIR", r"C:\ComfyUI\output")
+            comfy_dir = os.environ.get("COMFYUI_OUTPUT_DIR", "")
+            if not comfy_dir or not os.path.exists(comfy_dir):
+                for path in [r"C:\ComfyUI\output", r"L:\ComfyUI\output", r"D:\ComfyUI\output", r"E:\ComfyUI\output"]:
+                    if os.path.exists(path):
+                        comfy_dir = path
+                        break
             if os.path.exists(comfy_dir):
                 import glob
                 import shutil
