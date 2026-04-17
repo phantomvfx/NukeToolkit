@@ -1,0 +1,15 @@
+#! L:/Apps/Nuke17.0v1/nuke-17.0.1.dll -nx
+version 17.0 v1
+Gizmo {
+ addUserKnob {20 User}
+ addUserKnob {1 template l "Workflow Template"}
+ template Normals
+ addUserKnob {22 generate l Generate T "import NukeComfy.python.bridge; NukeComfy.python.bridge.bridge.generate(nuke.thisNode())" +STARTLINE}
+ addUserKnob {1 status l Status}
+ status Done
+}
+ Input {
+  inputs 0
+  name Source
+ }
+end_group

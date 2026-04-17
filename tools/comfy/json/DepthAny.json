@@ -1,0 +1,89 @@
+{
+  "3": {
+    "inputs": {
+      "model": "da3metric_large.safetensors",
+      "precision": "auto"
+    },
+    "class_type": "DownloadAndLoadDepthAnythingV3Model",
+    "_meta": {
+      "title": "(down)Load Depth Anything V3 Model"
+    }
+  },
+  "12": {
+    "inputs": {
+      "normalization_mode": "V2-Style",
+      "resize_method": "resize",
+      "invert_depth": false,
+      "keep_model_size": false,
+      "da3_model": [
+        "3",
+        0
+      ],
+      "images": [
+        "15",
+        0
+      ]
+    },
+    "class_type": "DepthAnything_V3",
+    "_meta": {
+      "title": "Depth Anything V3"
+    }
+  },
+  "15": {
+    "inputs": {
+      "resize_type": "scale by multiplier",
+      "resize_type.multiplier": 0.5,
+      "scale_method": "nearest-exact",
+      "input": [
+        "26",
+        0
+      ]
+    },
+    "class_type": "ResizeImageMaskNode",
+    "_meta": {
+      "title": "Resize Image/Mask"
+    }
+  },
+  "25": {
+    "inputs": {
+      "resize_type": "scale by multiplier",
+      "resize_type.multiplier": 2,
+      "scale_method": "nearest-exact",
+      "input": [
+        "12",
+        0
+      ]
+    },
+    "class_type": "ResizeImageMaskNode",
+    "_meta": {
+      "title": "Resize Image/Mask"
+    }
+  },
+  "26": {
+    "inputs": {
+      "image_path": "C:\\\\path\\\\to\\\\image.####.exr",
+      "color_space": "Raw (Keep ACEScg)",
+      "load_mode": "single_frame",
+      "frame_index": 1,
+      "sequence_limit": 0
+    },
+    "class_type": "Load EXR (ACEScg)",
+    "_meta": {
+      "title": "Load EXR (ACEScg)"
+    }
+  },
+  "28": {
+    "inputs": {
+      "filename_prefix": "DepthAny",
+      "color_space": "Raw (Keep Current)",
+      "images": [
+        "25",
+        0
+      ]
+    },
+    "class_type": "Save EXR (ACEScg)",
+    "_meta": {
+      "title": "Save EXR (ACEScg)"
+    }
+  }
+}

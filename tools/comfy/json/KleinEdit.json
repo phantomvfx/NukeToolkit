@@ -1,0 +1,357 @@
+{
+  "123": {
+    "inputs": {
+      "sampler_name": "euler"
+    },
+    "class_type": "KSamplerSelect",
+    "_meta": {
+      "title": "KSamplerSelect"
+    }
+  },
+  "124": {
+    "inputs": {
+      "noise": [
+        "126",
+        0
+      ],
+      "guider": [
+        "131",
+        0
+      ],
+      "sampler": [
+        "123",
+        0
+      ],
+      "sigmas": [
+        "132",
+        0
+      ],
+      "latent_image": [
+        "129",
+        0
+      ]
+    },
+    "class_type": "SamplerCustomAdvanced",
+    "_meta": {
+      "title": "SamplerCustomAdvanced"
+    }
+  },
+  "125": {
+    "inputs": {
+      "samples": [
+        "124",
+        0
+      ],
+      "vae": [
+        "128",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "126": {
+    "inputs": {
+      "noise_seed": 42
+    },
+    "class_type": "RandomNoise",
+    "_meta": {
+      "title": "RandomNoise"
+    }
+  },
+  "127": {
+    "inputs": {
+      "clip_name": "qwen_3_8b_fp8mixed.safetensors",
+      "type": "flux2",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "Load CLIP"
+    }
+  },
+  "128": {
+    "inputs": {
+      "vae_name": "flux2-vae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "129": {
+    "inputs": {
+      "width": [
+        "135",
+        0
+      ],
+      "height": [
+        "135",
+        1
+      ],
+      "batch_size": 1
+    },
+    "class_type": "EmptyFlux2LatentImage",
+    "_meta": {
+      "title": "Empty Flux 2 Latent"
+    }
+  },
+  "131": {
+    "inputs": {
+      "cfg": 1,
+      "model": [
+        "137",
+        0
+      ],
+      "positive": [
+        "136:77",
+        0
+      ],
+      "negative": [
+        "136:100",
+        0
+      ]
+    },
+    "class_type": "CFGGuider",
+    "_meta": {
+      "title": "CFGGuider"
+    }
+  },
+  "132": {
+    "inputs": {
+      "steps": 4,
+      "width": [
+        "135",
+        0
+      ],
+      "height": [
+        "135",
+        1
+      ]
+    },
+    "class_type": "Flux2Scheduler",
+    "_meta": {
+      "title": "Flux2Scheduler"
+    }
+  },
+  "133": {
+    "inputs": {
+      "text": "change the scene to night lighting",
+      "clip": [
+        "127",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Positive Prompt)"
+    }
+  },
+  "134": {
+    "inputs": {
+      "conditioning": [
+        "133",
+        0
+      ]
+    },
+    "class_type": "ConditioningZeroOut",
+    "_meta": {
+      "title": "ConditioningZeroOut"
+    }
+  },
+  "135": {
+    "inputs": {
+      "image": [
+        "157",
+        0
+      ]
+    },
+    "class_type": "GetImageSize",
+    "_meta": {
+      "title": "Get Image Size"
+    }
+  },
+  "137": {
+    "inputs": {
+      "unet_name": "flux-2-klein-9b-fp8.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "Load Diffusion Model"
+    }
+  },
+  "157": {
+    "inputs": {
+      "resize_type": "scale by multiplier",
+      "resize_type.multiplier": 0.5,
+      "scale_method": "nearest-exact",
+      "input": [
+        "166",
+        0
+      ]
+    },
+    "class_type": "ResizeImageMaskNode",
+    "_meta": {
+      "title": "Resize Image/Mask"
+    }
+  },
+  "159": {
+    "inputs": {
+      "model": "ema_vae_fp16.safetensors",
+      "device": "cuda:0",
+      "encode_tiled": true,
+      "encode_tile_size": 1024,
+      "encode_tile_overlap": 128,
+      "decode_tiled": true,
+      "decode_tile_size": 1024,
+      "decode_tile_overlap": 128,
+      "tile_debug": "false",
+      "offload_device": "cpu",
+      "cache_model": false
+    },
+    "class_type": "SeedVR2LoadVAEModel",
+    "_meta": {
+      "title": "SeedVR2 (Down)Load VAE Model"
+    }
+  },
+  "160": {
+    "inputs": {
+      "seed": 42,
+      "resolution": [
+        "187",
+        0
+      ],
+      "max_resolution": 3860,
+      "batch_size": 1,
+      "uniform_batch_size": false,
+      "color_correction": "lab",
+      "temporal_overlap": 0,
+      "prepend_frames": 0,
+      "input_noise_scale": 0,
+      "latent_noise_scale": 0,
+      "offload_device": "cpu",
+      "enable_debug": true,
+      "image": [
+        "125",
+        0
+      ],
+      "dit": [
+        "163",
+        0
+      ],
+      "vae": [
+        "159",
+        0
+      ]
+    },
+    "class_type": "SeedVR2VideoUpscaler",
+    "_meta": {
+      "title": "SeedVR2 Video Upscaler (v2.5.24)"
+    }
+  },
+  "163": {
+    "inputs": {
+      "model": "seedvr2_ema_7b_sharp_fp16.safetensors",
+      "device": "cuda:0",
+      "blocks_to_swap": 36,
+      "swap_io_components": false,
+      "offload_device": "cpu",
+      "cache_model": false,
+      "attention_mode": "sdpa"
+    },
+    "class_type": "SeedVR2LoadDiTModel",
+    "_meta": {
+      "title": "SeedVR2 (Down)Load DiT Model"
+    }
+  },
+  "166": {
+    "inputs": {
+      "image_path": "C:\\\\path\\\\to\\\\image.####.exr",
+      "color_space": "Raw (Keep ACEScg)",
+      "load_mode": "single_frame",
+      "frame_index": 1,
+      "sequence_limit": 0
+    },
+    "class_type": "Load EXR (ACEScg)",
+    "_meta": {
+      "title": "Load EXR (ACEScg)"
+    }
+  },
+  "167": {
+    "inputs": {
+      "filename_prefix": "seedvr",
+      "color_space": "Raw (Keep Current)",
+      "images": [
+        "160",
+        0
+      ]
+    },
+    "class_type": "Save EXR (ACEScg)",
+    "_meta": {
+      "title": "Save EXR (ACEScg)"
+    }
+  },
+  "187": {
+    "inputs": {
+      "image": [
+        "166",
+        0
+      ]
+    },
+    "class_type": "GetImageSize",
+    "_meta": {
+      "title": "Get Image Size"
+    }
+  },
+  "136:100": {
+    "inputs": {
+      "conditioning": [
+        "134",
+        0
+      ],
+      "latent": [
+        "136:78",
+        0
+      ]
+    },
+    "class_type": "ReferenceLatent",
+    "_meta": {
+      "title": "ReferenceLatent"
+    }
+  },
+  "136:78": {
+    "inputs": {
+      "pixels": [
+        "157",
+        0
+      ],
+      "vae": [
+        "128",
+        0
+      ]
+    },
+    "class_type": "VAEEncode",
+    "_meta": {
+      "title": "VAE Encode"
+    }
+  },
+  "136:77": {
+    "inputs": {
+      "conditioning": [
+        "133",
+        0
+      ],
+      "latent": [
+        "136:78",
+        0
+      ]
+    },
+    "class_type": "ReferenceLatent",
+    "_meta": {
+      "title": "ReferenceLatent"
+    }
+  }
+}

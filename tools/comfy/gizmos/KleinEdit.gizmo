@@ -1,0 +1,24 @@
+#! L:/Apps/Nuke17.0v1/nuke-17.0.1.dll -nx
+version 17.0 v1
+Gizmo {
+ addUserKnob {20 User}
+ addUserKnob {1 template l "Workflow Template"}
+ template KleinEdit
+ addUserKnob {1 prompt_pos l "Positive Prompt"}
+ prompt_pos "change the scene to night lighting"
+ addUserKnob {2 ref_file l "Reference File"}
+ addUserKnob {3 seed l Seed}
+ seed 42
+ addUserKnob {3 steps l Steps}
+ steps 4
+ addUserKnob {7 cfg l CFG}
+ cfg 1
+ addUserKnob {22 generate l Generate T "import NukeComfy.python.bridge; NukeComfy.python.bridge.bridge.generate(nuke.thisNode())" +STARTLINE}
+ addUserKnob {1 status l Status}
+ status Done
+}
+ Input {
+  inputs 0
+  name Source
+ }
+end_group
