@@ -120,7 +120,7 @@ class ComfyResultIntegrator:
                     
                     from NukeComfy.python.bridge import bridge
                     import time
-                    local_filename = f"comfy_result_{int(time.time())}.exr"
+                    local_filename = f"{node.name()}_img_result_{int(time.time())}.exr"
                     save_path = os.path.join(bridge.temp_folder, local_filename).replace('\\', '/')
                     
                     try:
@@ -154,7 +154,7 @@ class ComfyResultIntegrator:
         from NukeComfy.python.bridge import bridge
 
         # Save to Nuke temp folder
-        local_filename = f"comfy_result_latest{ext}"
+        local_filename = f"{node.name()}_img_result_latest{ext}"
         save_path = os.path.join(bridge.temp_folder, local_filename)
 
         downloaded = api_client.download_output(filename, subfolder, output_type, save_path)
@@ -188,11 +188,18 @@ def start_comfy_process(node, input_files):
     thread = ComfyPollingThread(node, input_files)
     _active_threads.append(thread)
     
-    thread.finished.connect(lambda data: ComfyResultIntegrator.create_result_node(
-        node, data,
-        node.knob('prompt_pos').value() if node.knob('prompt_pos') else "",
-        node.knob('seed').value() if node.knob('seed') else 0
-    ))
+    def on_finished(data):
+        ComfyResultIntegrator.create_result_node(
+            node, data,
+            node.knob('prompt_pos').value() if node.knob('prompt_pos') else "",
+            node.knob('seed').value() if node.knob('seed') else 0
+        )
+        for v in input_files.values():
+            if os.path.exists(str(v)):
+                try: os.remove(str(v))
+                except: pass
+                
+    thread.finished.connect(on_finished)
     thread.finished.connect(lambda _: _cleanup_thread(thread))
     
     thread.error.connect(lambda err: node.knob('status').setValue(f"Error: {err}"))
@@ -221,7 +228,7 @@ class ComfySequenceThread(QtCore.QThread):
             template_name = template_knob.value() if template_knob else "kleinedit"
             
             seq_timestamp = int(time.time())
-            seq_prefix = f"sequence_result_{seq_timestamp}"
+            seq_prefix = f"{self.node.name()}_img_result_{seq_timestamp}"
             
             for f in range(self.first, self.last + 1):
                 self.node.knob('status').setValue(f"Processing {f}/{self.last}...")
@@ -308,6 +315,19 @@ def start_comfy_sequence_process(node, input_files, first, last):
         prompt = node.knob('prompt_pos').value() if node.knob('prompt_pos') else ""
         read_node.knob('label').setValue(f"Sequence | {prompt[:20]}...")
         node.knob('status').setValue("Done")
+        
+        # Cleanup inputs
+        for v in input_files.values():
+            if "%04d" in str(v):
+                for f in range(first, last + 1):
+                    p = str(v) % f
+                    if os.path.exists(p):
+                        try: os.remove(p)
+                        except: pass
+            else:
+                if os.path.exists(str(v)):
+                    try: os.remove(str(v))
+                    except: pass
         
     thread.finished.connect(on_sequence_finished)
     thread.finished.connect(lambda _: _cleanup_thread(thread))

@@ -42,10 +42,11 @@ class ComfyBridge:
                 upstream = node.input(idx)
                 if upstream:
                     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                    gizmo_name = node.name()
                     if first is not None and last is not None:
-                        filename = f"comfy_input_{idx}_{timestamp}.%04d.exr"
+                        filename = f"{gizmo_name}_img_input_{idx}_{timestamp}.%04d.exr"
                     else:
-                        filename = f"comfy_input_{idx}_{timestamp}.exr"
+                        filename = f"{gizmo_name}_img_input_{idx}_{timestamp}.exr"
                     full_path = os.path.join(self.temp_folder, filename).replace("\\", "/")
                     w = nuke.nodes.Write(file=full_path, file_type="exr")
                     w.setInput(0, upstream)
