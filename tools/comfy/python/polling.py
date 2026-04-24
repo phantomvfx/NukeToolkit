@@ -155,7 +155,7 @@ class ComfyResultIntegrator:
 
         # Save to Nuke temp folder
         local_filename = f"{node.name()}_img_result_latest{ext}"
-        save_path = os.path.join(bridge.temp_folder, local_filename)
+        save_path = os.path.join(bridge.temp_folder, local_filename).replace('\\', '/')
 
         downloaded = api_client.download_output(filename, subfolder, output_type, save_path)
 
