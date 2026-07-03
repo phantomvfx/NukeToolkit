@@ -16,80 +16,56 @@ class ComfyAPIClient:
         with open(template_path, 'r') as f:
             return json.load(f)
 
+    def _find_node(self, workflow, title, class_type=None):
+        """Finds a node in the workflow by its title marker or class type."""
+        # 1. Try finding by title marker first (e.g., NUKE_PROMPT)
+        for node_id, node_info in workflow.items():
+            if node_info.get('_meta', {}).get('title') == title:
+                return node_id
+
+        # 2. Fallback to class type if provided
+        if class_type:
+            for node_id, node_info in workflow.items():
+                if node_info.get('class_type') == class_type:
+                    return node_id
+        return None
+
     def patch_workflow(self, workflow, node, input_files=None):
         """
         Injects Nuke data into the ComfyUI API JSON.
-        Handles specific mapping for KleinEdit and other workflows.
-        input_files: dict of {input_index: rendered_file_path} from bridge.render_inputs
+        Matches nodes via title markers (e.g., NUKE_PROMPT) or class types.
         """
-        # Common values
+        # Extract values from Nuke knobs
         pos_prompt = node.knob('prompt_pos').value() if node.knob('prompt_pos') else ""
         seed = int(node.knob('seed').value()) if node.knob('seed') else 0
         steps = int(node.knob('steps').value()) if node.knob('steps') else 20
         cfg = float(node.knob('cfg').value()) if node.knob('cfg') else 8.0
 
-        # 1. Inject Prompts (Look for CLIPTextEncode or GeminiImage2Node)
-        # For KleinEdit: Node 133 is Positive Prompt
-        if '133' in workflow and workflow['133'].get('class_type') == 'CLIPTextEncode':
-            workflow['133']['inputs']['text'] = pos_prompt
-        else:
-            for node_id, node_info in workflow.items():
-                if node_info.get('class_type') == 'CLIPTextEncode':
-                    node_info['inputs']['text'] = pos_prompt
-                    break
-                elif node_info.get('class_type') == 'GeminiImage2Node':
-                    node_info['inputs']['prompt'] = pos_prompt
-                    break
+        # Mapping: (Marker Title, Fallback Class, Input Key, Value)
+        mappings = [
+            ('NUKE_PROMPT', 'CLIPTextEncode', 'text', pos_prompt),
+            ('NUKE_PROMPT', 'GeminiImage2Node', 'prompt', pos_prompt),
+            ('NUKE_SEED', 'RandomNoise', 'noise_seed', seed),
+            ('NUKE_SEED', 'GeminiImage2Node', 'seed', seed),
+            ('NUKE_STEPS', 'Flux2Scheduler', 'steps', steps),
+            ('NUKE_CFG', 'CFGGuider', 'cfg', cfg),
+            ('NUKE_SEED_UPSCALER', 'SeedVR2VideoUpscaler', 'seed', seed),
+        ]
 
-        # 2. Inject Seed (Look for RandomNoise or GeminiImage2Node - Node 126 in KleinEdit)
-        if '126' in workflow and workflow['126'].get('class_type') == 'RandomNoise':
-            workflow['126']['inputs']['noise_seed'] = seed
-        else:
-            for node_id, node_info in workflow.items():
-                if node_info.get('class_type') == 'RandomNoise':
-                    node_info['inputs']['noise_seed'] = seed
-                    break
-                elif node_info.get('class_type') == 'GeminiImage2Node':
-                    node_info['inputs']['seed'] = seed
-                    break
+        for title, cls, key, value in mappings:
+            node_id = self._find_node(workflow, title, cls)
+            if node_id:
+                workflow[node_id]['inputs'][key] = value
 
-        # 3. Inject Steps (Look for Flux2Scheduler - Node 132 in KleinEdit)
-        if '132' in workflow and workflow['132'].get('class_type') == 'Flux2Scheduler':
-            workflow['132']['inputs']['steps'] = steps
-        else:
-            for node_id, node_info in workflow.items():
-                if node_info.get('class_type') == 'Flux2Scheduler':
-                    node_info['inputs']['steps'] = steps
-                    break
-
-        # 4. Inject CFG (Look for CFGGuider - Node 131 in KleinEdit)
-        if '131' in workflow and workflow['131'].get('class_type') == 'CFGGuider':
-            workflow['131']['inputs']['cfg'] = cfg
-        else:
-            for node_id, node_info in workflow.items():
-                if node_info.get('class_type') == 'CFGGuider':
-                    node_info['inputs']['cfg'] = cfg
-                    break
-
-        # 5. Inject EXR input path (Look for Load EXR - Node 166 in KleinEdit)
+        # Special handling for EXR input path
         if input_files and 0 in input_files:
-            exr_path = input_files[0]
-            if '166' in workflow:
-                workflow['166']['inputs']['image_path'] = exr_path.replace('\\', '/')
-            else:
-                for node_id, node_info in workflow.items():
-                    if node_info.get('class_type') in ['Load EXR (ACEScg)', 'Load EXR']:
-                        node_info['inputs']['image_path'] = exr_path.replace('\\', '/')
-                        break
+            exr_path = input_files[0].replace('\\', '/')
+            input_node_id = self._find_node(workflow, 'NUKE_INPUT', 'Load EXR (ACEScg)')
+            if not input_node_id:
+                input_node_id = self._find_node(workflow, 'NUKE_INPUT', 'Load EXR')
 
-        # 6. Sync SeedVR2 upscaler seed (Node 160 in KleinEdit)
-        if '160' in workflow and workflow['160'].get('class_type') == 'SeedVR2VideoUpscaler':
-            workflow['160']['inputs']['seed'] = seed
-        else:
-            for node_id, node_info in workflow.items():
-                if node_info.get('class_type') == 'SeedVR2VideoUpscaler':
-                    node_info['inputs']['seed'] = seed
-                    break
+            if input_node_id:
+                workflow[input_node_id]['inputs']['image_path'] = exr_path
 
         return workflow
 

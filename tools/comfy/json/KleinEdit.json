@@ -58,7 +58,7 @@
     },
     "class_type": "RandomNoise",
     "_meta": {
-      "title": "RandomNoise"
+      "title": "NUKE_SEED"
     }
   },
   "127": {
@@ -116,7 +116,7 @@
     },
     "class_type": "CFGGuider",
     "_meta": {
-      "title": "CFGGuider"
+      "title": "NUKE_CFG"
     }
   },
   "132": {
@@ -133,12 +133,12 @@
     },
     "class_type": "Flux2Scheduler",
     "_meta": {
-      "title": "Flux2Scheduler"
+      "title": "NUKE_STEPS"
     }
   },
   "133": {
     "inputs": {
-      "text": "change the scene to night lighting",
+      "text": "A breathtaking, photorealistic wide-angle shot of a post-apocalyptic New York City fully reclaimed by a dense jungle. Iconic skyscrapers like the Empire State Building are covered in cascading ivy, giant vines, and hanging moss. Trees growing out of shattered glass windows. Cloudy day lighting, cinematic atmosphere, god rays shining through the humid mist, National Geographic photography style, masterpiece, incredibly detailed.",
       "clip": [
         "127",
         0
@@ -146,7 +146,7 @@
     },
     "class_type": "CLIPTextEncode",
     "_meta": {
-      "title": "CLIP Text Encode (Positive Prompt)"
+      "title": "NUKE_PROMPT"
     }
   },
   "134": {
@@ -189,7 +189,7 @@
       "resize_type.multiplier": 0.5,
       "scale_method": "nearest-exact",
       "input": [
-        "166",
+        "223",
         0
       ]
     },
@@ -267,43 +267,77 @@
       "title": "SeedVR2 (Down)Load DiT Model"
     }
   },
-  "166": {
-    "inputs": {
-      "image_path": "C:\\\\path\\\\to\\\\image.####.exr",
-      "color_space": "Raw (Keep ACEScg)",
-      "load_mode": "single_frame",
-      "frame_index": 1,
-      "sequence_limit": 0
-    },
-    "class_type": "Load EXR (ACEScg)",
-    "_meta": {
-      "title": "Load EXR (ACEScg)"
-    }
-  },
-  "167": {
-    "inputs": {
-      "filename_prefix": "seedvr",
-      "color_space": "Raw (Keep Current)",
-      "images": [
-        "160",
-        0
-      ]
-    },
-    "class_type": "Save EXR (ACEScg)",
-    "_meta": {
-      "title": "Save EXR (ACEScg)"
-    }
-  },
   "187": {
     "inputs": {
       "image": [
-        "166",
+        "223",
         0
       ]
     },
     "class_type": "GetImageSize",
     "_meta": {
       "title": "Get Image Size"
+    }
+  },
+  "223": {
+    "inputs": {
+      "source": "L:\\Projects\\NY_Aerial\\IO\\EXR\\Aerial_View_Lower_Manhattan_3840x2160.####.exr",
+      "frame_mode": "single",
+      "input_colorspace": "ACEScg",
+      "output_colorspace": "sRGB - Display",
+      "raw_data": false,
+      "start_frame": 1,
+      "end_frame": 1,
+      "frame_shift": 1,
+      "missing_frames": "black",
+      "edge_mode": "hold",
+      "fps": 0
+    },
+    "class_type": "OCIORead",
+    "_meta": {
+      "title": "NUKE_INPUT"
+    }
+  },
+  "224": {
+    "inputs": {
+      "from_colorspace": "sRGB - Display",
+      "output_colorspace": "ACEScg",
+      "container": "still image",
+      "still_format": "exr",
+      "video_codec": "prores_4444",
+      "bit_depth": "16f",
+      "auto_range": true,
+      "first_frame": 1,
+      "last_frame": 1,
+      "start_number": 1,
+      "source_start": 1,
+      "raw_data": false,
+      "output_folder": "",
+      "filename": "ocio_out",
+      "colorspace_in_name": true,
+      "auto_colorspace": true,
+      "compression": "zip",
+      "fps": 24,
+      "images": [
+        "160",
+        0
+      ]
+    },
+    "class_type": "OCIOWrite",
+    "_meta": {
+      "title": "OCIO Write"
+    }
+  },
+  "225": {
+    "inputs": {
+      "images": [
+        "223",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Preview Image"
     }
   },
   "136:100": {

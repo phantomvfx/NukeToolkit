@@ -1,67 +1,7 @@
 {
-  "3": {
-    "inputs": {
-      "model": "da3metric_large.safetensors",
-      "precision": "auto"
-    },
-    "class_type": "DownloadAndLoadDepthAnythingV3Model",
-    "_meta": {
-      "title": "(down)Load Depth Anything V3 Model"
-    }
-  },
-  "12": {
-    "inputs": {
-      "normalization_mode": "V2-Style",
-      "resize_method": "resize",
-      "invert_depth": false,
-      "keep_model_size": false,
-      "da3_model": [
-        "3",
-        0
-      ],
-      "images": [
-        "15",
-        0
-      ]
-    },
-    "class_type": "DepthAnything_V3",
-    "_meta": {
-      "title": "Depth Anything V3"
-    }
-  },
-  "15": {
-    "inputs": {
-      "resize_type": "scale by multiplier",
-      "resize_type.multiplier": 0.5,
-      "scale_method": "nearest-exact",
-      "input": [
-        "26",
-        0
-      ]
-    },
-    "class_type": "ResizeImageMaskNode",
-    "_meta": {
-      "title": "Resize Image/Mask"
-    }
-  },
-  "25": {
-    "inputs": {
-      "resize_type": "scale by multiplier",
-      "resize_type.multiplier": 2,
-      "scale_method": "nearest-exact",
-      "input": [
-        "12",
-        0
-      ]
-    },
-    "class_type": "ResizeImageMaskNode",
-    "_meta": {
-      "title": "Resize Image/Mask"
-    }
-  },
   "26": {
     "inputs": {
-      "image_path": "C:\\\\path\\\\to\\\\image.####.exr",
+      "image_path": "L:\\Projects\\NY_Aerial\\IO\\EXR\\Aerial_View_Lower_Manhattan_3840x2160.####.exr",
       "color_space": "Raw (Keep ACEScg)",
       "load_mode": "single_frame",
       "frame_index": 1,
@@ -77,13 +17,45 @@
       "filename_prefix": "DepthAny",
       "color_space": "Raw (Keep Current)",
       "images": [
-        "25",
+        "31",
         0
       ]
     },
     "class_type": "Save EXR (ACEScg)",
     "_meta": {
       "title": "Save EXR (ACEScg)"
+    }
+  },
+  "30": {
+    "inputs": {
+      "model": "prs-eth/marigold-depth-lcm-v1-0"
+    },
+    "class_type": "MarigoldModelLoader",
+    "_meta": {
+      "title": "MarigoldModelLoader"
+    }
+  },
+  "31": {
+    "inputs": {
+      "seed": 42,
+      "denoise_steps": 4,
+      "ensemble_size": 3,
+      "processing_resolution": 768,
+      "scheduler": "LCMScheduler",
+      "use_taesd_vae": false,
+      "keep_model_loaded": false,
+      "marigold_model": [
+        "30",
+        0
+      ],
+      "image": [
+        "26",
+        0
+      ]
+    },
+    "class_type": "MarigoldDepthEstimation_v2",
+    "_meta": {
+      "title": "MarigoldDepthEstimation_v2"
     }
   }
 }
