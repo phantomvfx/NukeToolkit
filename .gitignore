@@ -1,0 +1,20 @@
+# Reference library — regenerable doc imports (see reference/nukeXX/README.md)
+reference/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+
+# Nuke
+*.autosave
