@@ -18,8 +18,9 @@ session over a local TCP socket.
 2. **`nuke.mcp_listener.py`** — a background TCP listener that runs *inside*
    Nuke. It receives Python code, executes it in Nuke's context, and returns
    the value of the `result` variable.
-3. **`menu.py`** — a Nuke menu file that adds a **NukeMCP** menu to start/stop
-   the listener from inside Nuke.
+3. **`menu.py`** — a Nuke menu file that imports the listener module and calls
+   `nuke_mcp_listener.start_listener()`, auto-starting the listener when Nuke
+   launches.
 
 ## Requirements
 
@@ -46,16 +47,22 @@ loads at startup. Any of these work:
 - Your user Nuke directory, e.g. `C:\Users\<you>\.nuke\`
 - Any directory listed in the `NUKE_PATH` environment variable
 
-Then **restart Nuke**. A **NukeMCP** menu will appear in the menu bar.
+Then **restart Nuke**. The listener starts automatically — `menu.py` calls
+`nuke_mcp_listener.start_listener()` on launch. The listener does **not** print
+anything to the Nuke console; verify it's up by checking the port (see
+[Verify the connection](#verify-the-connection)).
 
 ## Usage
 
-### 1. Start the listener inside Nuke
+### 1. Start Nuke (the listener auto-starts)
 
-In Nuke, go to **NukeMCP → Start Listener**. You should see a message like:
+The listener starts automatically when Nuke launches — `menu.py` imports
+`nuke_mcp_listener` and calls `nuke_mcp_listener.start_listener()`. No manual
+step is needed. The listener does **not** print a message to the Nuke console;
+to confirm it's running, check that port 54321 is listening:
 
-```
-Listener started on 127.0.0.1:54321.
+```powershell
+Get-NetTCPConnection -LocalPort 54321   # expect State: Listen
 ```
 
 ### 2. Run the MCP server
@@ -78,6 +85,57 @@ following tools are exposed:
 | `create_node` | Create a node (e.g. `Grade`, `Blur`, `CameraTracker`). |
 | `reload_module` | Reload a Python module from a dev sandbox path inside Nuke. |
 | `find_node_errors` | Find all nodes in the DAG showing an error banner. |
+
+## Using with Claude Code CLI
+
+The server runs as a **stdio** MCP server, so it can be registered directly with
+the [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code). The
+listener auto-starts when Nuke launches (see [Usage](#usage)), so just make sure
+Nuke is open before you start Claude Code.
+
+### Option A — Register via the CLI
+
+```powershell
+claude mcp add --scope user nuke L:\NukeMCP\.venv\Scripts\python.exe L:\NukeMCP\nuke_mcp_server.py
+```
+
+Then start Claude Code and the tools will be available automatically:
+
+```powershell
+claude
+```
+
+### Option B — Project-level `.mcp.json`
+
+Create a `.mcp.json` file in the project root (or your working directory) so the
+server is picked up whenever Claude Code runs in that folder:
+
+```json
+{
+  "mcpServers": {
+    "nuke": {
+      "command": "L:\\NukeMCP\\.venv\\Scripts\\python.exe",
+      "args": ["L:\\NukeMCP\\nuke_mcp_server.py"]
+    }
+  }
+}
+```
+
+### Verify the connection
+
+Inside Claude Code, run:
+
+```
+/mcp
+```
+
+You should see `nuke` listed as a connected stdio server with the tools
+`execute_python`, `get_node_graph`, `create_node`, `reload_module`, and
+`find_node_errors`. You can then ask Claude to, for example, *"list all nodes in
+Nuke"* or *"create a Blur node"*.
+
+> **Note:** The paths above assume the repo lives at `L:\NukeMCP`. Adjust the
+> `command`/`args` paths if you cloned it elsewhere.
 
 ## Wire Protocol
 
@@ -103,14 +161,18 @@ On failure:
 
 ## Troubleshooting
 
-- **`Connection refused`** — the listener is not running. Start it via
-  **NukeMCP → Start Listener** in Nuke.
+- **`Connection refused`** — the listener is not running. Make sure Nuke is open
+  and the listener started. Verify with
+  `Get-NetTCPConnection -LocalPort 54321` (expect `State: Listen`), or run
+  `nuke_mcp_listener.start_listener()` in Nuke's Script Editor to start it
+  without restarting.
 - **Port already in use** — another process is on `54321`. Stop the listener
   (or the other process) and retry.
 - **`nuke` not found** — make sure `nuke.mcp_listener.py` is running inside
   Nuke, not in a plain Python shell.
-- **Menu not appearing** — confirm `menu.py` and `nuke.mcp_listener.py` are in
-  a directory Nuke scans (NUKE_PATH or `~/.nuke`) and restart Nuke.
+- **Listener not starting** — confirm `menu.py` and the listener module are in a
+  directory Nuke scans (NUKE_PATH or `~/.nuke`), that `menu.py` calls
+  `nuke_mcp_listener.start_listener()` after the import, and restart Nuke.
 
 ## License
 
