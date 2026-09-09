@@ -8,14 +8,14 @@ session over a local TCP socket.
 
 ```
 +----------------+      +---------------------+      +---------------------+
-|  MCP Client    | <--> |  nuke_mcp_server.py | <--> |  nuke.mcp_listener.py |
+|  MCP Client    | <--> |  nuke_mcp_server.py | <--> |  nuke_mcp_listener.py |
 |  (Claude, etc) | MCP  |  (Python, this repo)| TCP  |  (runs inside Nuke)  |
 +----------------+      +---------------------+      +---------------------+
 ```
 
 1. **`nuke_mcp_server.py`** — an MCP 2.x server that exposes tools. It runs
    outside Nuke (in a Python venv) and communicates with Nuke over TCP.
-2. **`nuke.mcp_listener.py`** — a background TCP listener that runs *inside*
+2. **`nuke_mcp_listener.py`** — a background TCP listener that runs *inside*
    Nuke. It receives Python code, executes it in Nuke's context, and returns
    the value of the `result` variable.
 3. **`menu.py`** — a Nuke menu file that imports the listener module and calls
@@ -41,7 +41,7 @@ pip install mcp
 
 ### 2. Install the Nuke-side files
 
-Copy **`nuke.mcp_listener.py`** and **`menu.py`** into a directory that Nuke
+Copy **`nuke_mcp_listener.py`** and **`menu.py`** into a directory that Nuke
 loads at startup. Any of these work:
 
 - Your user Nuke directory, e.g. `C:\Users\<you>\.nuke\`
@@ -168,7 +168,7 @@ On failure:
   without restarting.
 - **Port already in use** — another process is on `54321`. Stop the listener
   (or the other process) and retry.
-- **`nuke` not found** — make sure `nuke.mcp_listener.py` is running inside
+- **`nuke` not found** — make sure `nuke_mcp_listener.py` is running inside
   Nuke, not in a plain Python shell.
 - **Listener not starting** — confirm `menu.py` and the listener module are in a
   directory Nuke scans (NUKE_PATH or `~/.nuke`), that `menu.py` calls

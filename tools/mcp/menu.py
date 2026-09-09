@@ -14,10 +14,6 @@ try:
 except:
     pass
 
-import sys
-if r"L:\NukeMCP" not in sys.path:
-    sys.path.append(r"L:\NukeMCP")
-
 import nuke_mcp_listener
 nuke_mcp_listener.start_listener()
 
