@@ -21,6 +21,11 @@ def create_nuke_comfy_menu():
             if file.endswith('.gizmo'):
                 name = os.path.splitext(file)[0]
                 comfy_menu.addCommand(name, f'nuke.createNode("{name}")')
+            elif file.endswith('.nk'):
+                # .nk tools are single Group snippets: pasted into the script, no plugin path needed at render time
+                name = os.path.splitext(file)[0]
+                path = os.path.join(gizmo_dir, file).replace('\\', '/')
+                comfy_menu.addCommand(name, f'nuke.nodePaste("{path}")')
 
 # Execute menu creation
 create_nuke_comfy_menu()

@@ -3,10 +3,12 @@ import urllib.request
 import urllib.parse
 import urllib.error
 import os
+import uuid
 
 class ComfyAPIClient:
-    def __init__(self, base_url="http://127.0.0.1:8188"):
-        self.base_url = base_url
+    def __init__(self, base_url=None):
+        # COMFY_URL is set by Nuke_ComfyUI.bat for the Tailscale / RunPod targets
+        self.base_url = (base_url or os.environ.get("COMFY_URL") or "http://127.0.0.1:8188").rstrip("/")
 
     def load_template(self, template_name):
         """Loads a JSON workflow from the /json/ folder."""
@@ -68,6 +70,35 @@ class ComfyAPIClient:
                 workflow[input_node_id]['inputs']['image_path'] = exr_path
 
         return workflow
+
+    def upload_image(self, file_path, subfolder="nukecomfy"):
+        """
+        Uploads an image to ComfyUI's input folder (/upload/image) so LoadImage /
+        LoadImageMask nodes can use it. Works for remote targets too.
+        Returns the LoadImage value ("subfolder/name.png"), or None on failure.
+        """
+        boundary = uuid.uuid4().hex
+        filename = os.path.basename(file_path)
+        fields = {"type": "input", "subfolder": subfolder, "overwrite": "true"}
+
+        body = b""
+        for key, value in fields.items():
+            body += (f'--{boundary}\r\nContent-Disposition: form-data; name="{key}"\r\n\r\n{value}\r\n').encode('utf-8')
+        with open(file_path, 'rb') as f:
+            body += (f'--{boundary}\r\nContent-Disposition: form-data; name="image"; filename="{filename}"\r\n'
+                     f'Content-Type: application/octet-stream\r\n\r\n').encode('utf-8')
+            body += f.read() + b"\r\n"
+        body += f'--{boundary}--\r\n'.encode('utf-8')
+
+        try:
+            req = urllib.request.Request(f"{self.base_url}/upload/image", data=body,
+                                         headers={'Content-Type': f'multipart/form-data; boundary={boundary}'})
+            with urllib.request.urlopen(req, timeout=60) as response:
+                info = json.loads(response.read().decode('utf-8'))
+            return f"{info['subfolder']}/{info['name']}" if info.get('subfolder') else info['name']
+        except Exception as e:
+            print(f"Upload Error: {e}")
+            return None
 
     def send_prompt(self, prompt_json):
         """Sends the patched JSON to the ComfyUI /prompt endpoint."""

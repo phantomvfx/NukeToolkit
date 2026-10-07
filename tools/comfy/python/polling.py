@@ -14,10 +14,12 @@ class ComfyPollingThread(QtCore.QThread):
     finished = QtCore.Signal(dict)
     error = QtCore.Signal(str)
 
-    def __init__(self, node, input_files):
+    def __init__(self, node, input_files, patcher=None):
         super().__init__()
         self.node = node
         self.input_files = input_files
+        # patcher(workflow, node, input_files) -> workflow; defaults to the legacy NUKE_* mapping
+        self.patcher = patcher
 
     def run(self):
         try:
@@ -43,7 +45,8 @@ class ComfyPollingThread(QtCore.QThread):
             if 'prompt' in workflow and isinstance(workflow['prompt'], dict):
                 workflow = workflow['prompt']
 
-            patched_workflow = api_client.patch_workflow(workflow, self.node, self.input_files)
+            patch = self.patcher or api_client.patch_workflow
+            patched_workflow = patch(workflow, self.node, self.input_files)
 
             self.node.knob('status').setValue("Sending to ComfyUI...")
             result = api_client.send_prompt(patched_workflow)
@@ -180,20 +183,25 @@ def _cleanup_thread(thread):
     if thread in _active_threads:
         _active_threads.remove(thread)
 
-def start_comfy_process(node, input_files):
+def start_comfy_process(node, input_files, patcher=None, integrator=None):
     """
     PyScript entry point: Initiates the async polling cycle.
     input_files: dict of {input_index: rendered_file_path}
+    patcher:     optional patcher(workflow, node, input_files) replacing the legacy mapping
+    integrator:  optional integrator(node, output_data) replacing the legacy Read-node drop
     """
-    thread = ComfyPollingThread(node, input_files)
+    thread = ComfyPollingThread(node, input_files, patcher)
     _active_threads.append(thread)
-    
+
     def on_finished(data):
-        ComfyResultIntegrator.create_result_node(
-            node, data,
-            node.knob('prompt_pos').value() if node.knob('prompt_pos') else "",
-            node.knob('seed').value() if node.knob('seed') else 0
-        )
+        if integrator:
+            integrator(node, data)
+        else:
+            ComfyResultIntegrator.create_result_node(
+                node, data,
+                node.knob('prompt_pos').value() if node.knob('prompt_pos') else "",
+                node.knob('seed').value() if node.knob('seed') else 0
+            )
         for v in input_files.values():
             if os.path.exists(str(v)):
                 try: os.remove(str(v))

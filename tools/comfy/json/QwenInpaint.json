@@ -1,0 +1,225 @@
+{
+  "1": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "startframe.png"
+    },
+    "_meta": {
+      "title": "NUKE_SOURCE"
+    }
+  },
+  "2": {
+    "class_type": "LoadImageMask",
+    "inputs": {
+      "image": "startframe_crate_mask.png",
+      "channel": "red"
+    },
+    "_meta": {
+      "title": "NUKE_MASK"
+    }
+  },
+  "3": {
+    "class_type": "ImageScale",
+    "inputs": {
+      "image": [
+        "1",
+        0
+      ],
+      "upscale_method": "lanczos",
+      "width": 1920,
+      "height": 1088,
+      "crop": "disabled"
+    },
+    "_meta": {
+      "title": "NUKE_WORK_SIZE"
+    }
+  },
+  "5": {
+    "class_type": "GrowMask",
+    "inputs": {
+      "mask": [
+        "2",
+        0
+      ],
+      "expand": 8,
+      "tapered_corners": true
+    },
+    "_meta": {
+      "title": "NUKE_GROW"
+    }
+  },
+  "9": {
+    "class_type": "VAELoader",
+    "inputs": {
+      "vae_name": "qwen_image_2.1_vae_bf16.safetensors"
+    }
+  },
+  "10": {
+    "class_type": "UNETLoader",
+    "inputs": {
+      "unet_name": "qwen_image_2.1_int8_convrot.safetensors",
+      "weight_dtype": "default"
+    }
+  },
+  "11": {
+    "class_type": "CLIPLoader",
+    "inputs": {
+      "clip_name": "qwen3vl_8b_int8_convrot.safetensors",
+      "type": "qwen_image",
+      "device": "default"
+    }
+  },
+  "12": {
+    "class_type": "QwenImage21Cache",
+    "inputs": {
+      "model": [
+        "10",
+        0
+      ],
+      "device": "auto",
+      "dtype": "default"
+    }
+  },
+  "14": {
+    "class_type": "TextEncodeQwenImage21",
+    "inputs": {
+      "clip": [
+        "11",
+        0
+      ],
+      "vae": [
+        "9",
+        0
+      ],
+      "prompt": "Remove the wooden crate and fill the area with the dry grass and rocky ground that matches the surroundings, keeping the same night lighting. Keep everything else exactly unchanged.",
+      "negative_prompt": "",
+      "resolution": 1448,
+      "images.image_1": [
+        "3",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "NUKE_PROMPT"
+    }
+  },
+  "15": {
+    "class_type": "VAEEncode",
+    "inputs": {
+      "pixels": [
+        "3",
+        0
+      ],
+      "vae": [
+        "9",
+        0
+      ]
+    }
+  },
+  "16": {
+    "class_type": "SetLatentNoiseMask",
+    "inputs": {
+      "samples": [
+        "15",
+        0
+      ],
+      "mask": [
+        "5",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Limit sampling to mask"
+    }
+  },
+  "17": {
+    "class_type": "KSampler",
+    "inputs": {
+      "model": [
+        "12",
+        0
+      ],
+      "positive": [
+        "14",
+        0
+      ],
+      "negative": [
+        "14",
+        1
+      ],
+      "latent_image": [
+        "16",
+        0
+      ],
+      "seed": 1234,
+      "steps": 25,
+      "cfg": 1.0,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1.0
+    },
+    "_meta": {
+      "title": "NUKE_SAMPLER"
+    }
+  },
+  "18": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "17",
+        0
+      ],
+      "vae": [
+        "9",
+        0
+      ]
+    }
+  },
+  "23": {
+    "class_type": "GetImageSize",
+    "inputs": {
+      "image": [
+        "1",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Original size"
+    }
+  },
+  "19": {
+    "class_type": "ImageScale",
+    "inputs": {
+      "image": [
+        "18",
+        0
+      ],
+      "upscale_method": "lanczos",
+      "width": [
+        "23",
+        0
+      ],
+      "height": [
+        "23",
+        1
+      ],
+      "crop": "disabled"
+    },
+    "_meta": {
+      "title": "Back to original size"
+    }
+  },
+  "24": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "19",
+        0
+      ],
+      "filename_prefix": "nukecomfy/qwen_inpaint"
+    },
+    "_meta": {
+      "title": "NUKE_OUTPUT"
+    }
+  }
+}
