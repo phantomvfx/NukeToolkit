@@ -15,20 +15,23 @@ A streamlined integration bridge between Nuke and ComfyUI. This repository provi
    nuke.pluginAddPath('./NukeComfy')
    ```
 
-3. Restart Nuke. You'll now see a "NukeComfy" menu inside the top menu bar containing `.gizmo` nodes such as `KleinEdit`, `DepthAny`, and `Normals`.
+3. Restart Nuke. You'll now see a "NukeComfy" menu inside the top menu bar containing the tools `KleinEdit`, `DepthAny`, `NormalCrafter` and `QwenInpaint`. They are `.nk` files (single Group snippets pasted into the script, not `.gizmo` files), so the node lives in the script itself. Scripts saved with the old `.gizmo` versions of the first three need those nodes replaced by the `.nk` groups (same knobs).
 
-## QwenInpaint (mask-based inpaint)
+## QwenInpaint (object removal / replacement)
 
 `gizmos/QwenInpaint.nk` is a single Group (built for Nuke 16, `.nk` rather than `.gizmo` so the whole tool
 is embedded in the script). It shows up in the NukeComfy menu, or import it with File > Import Script /
 `nuke.nodePaste()`.
 
-- **Source**: the image to repaint. **Mask**: alpha by default (pick another channel in *Mask channel*), white = repaint.
+- **Source**: the image to edit. **Mask**: alpha by default (pick another channel in *Mask channel*), white = the area to edit.
+- **The model cannot see the mask.** The area under the Mask (grown by *Grow* px) is tinted red in the image the
+  model receives, and the prompt refers to it: *"Remove the object highlighted in red and fill the area with the
+  surrounding background…"*, or *"Replace the object highlighted in red with …"*. Naming the object is not needed.
 - **Generate** renders the current frame of both to PNG, uploads them to ComfyUI, runs `json/QwenInpaint.json`
-  and loads the generated frame inside the group.
-- The group composites the result over your untouched Source in Nuke (float / linear) through the mask grown by
-  *Grow* px (also the sampling mask sent to ComfyUI) and blurred by *Feather* px, so changing Grow / Feather
-  afterwards does not need another generation. *Show result* toggles between Source and the composite.
+  (a whole-frame instruction edit) and loads the generated frame inside the group. The node label shows the status.
+- The group composites the result over your untouched Source in Nuke (float / linear) through the grown mask
+  blurred by *Feather* px, so changing Grow / Feather afterwards does not need another generation, and pixels
+  outside the mask are never changed. *Show result* toggles between Source and the composite.
 - Working size: Source is scaled so its long edge is *Working size* (default 1920) and each side snapped to a multiple of 32.
 
 ComfyUI needs the Qwen-Image 2.1 setup the template references (`QwenImage21Cache`, `TextEncodeQwenImage21`

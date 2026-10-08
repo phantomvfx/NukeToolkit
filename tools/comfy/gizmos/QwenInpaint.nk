@@ -1,10 +1,13 @@
-# QwenInpaint - mask-based inpaint through ComfyUI (Qwen-Image 2.1, json/QwenInpaint.json)
+# QwenInpaint - object removal / replacement inpaint through ComfyUI (Qwen-Image 2.1, json/QwenInpaint.json)
+# The model cannot see a mask, so the area under Mask (grown by Grow) is tinted red in the image it receives and
+# the prompt refers to it ("Remove the object highlighted in red ..."). The generated frame is composited over the
+# untouched Source in Nuke through the grown + feathered Mask, so pixels outside the mask are never changed.
 # Target: Nuke 16.1 (built and tested on 16.1v4). A single top-level Group: the whole tool lives in the script,
 # nothing is loaded from the plugin path at render time.
 #
 # Import: this is NOT a .gizmo and does not appear in the node toolbar. Use the NukeComfy menu, File > Import
 # Script, nuke.nodePaste(path), or paste this file's text into the node graph.
-# Inputs: Source (image to repaint) and Mask (alpha by default, see "Mask channel"; white = repaint).
+# Inputs: Source (image to edit) and Mask (alpha by default, see "Mask channel"; white = the area to edit).
 # Generate (current frame) needs NukeComfy on the plugin path (python/inpaint.py) and a reachable ComfyUI
 # (COMFY_URL, default http://127.0.0.1:8188). Without them the group still evaluates: it passes Source through
 # until a result exists, then composites the baked Result Read over Source through the grown + feathered Mask.
@@ -14,13 +17,12 @@ push $cut_paste_input
 Group {
  name QwenInpaint
  tile_color 0x7a5c99ff
- xpos -60
- ypos -150
+ label "\[value status]"
  addUserKnob {20 user l QwenInpaint}
  addUserKnob {1 template +INVISIBLE}
  template QwenInpaint
- addUserKnob {43 prompt_pos l Prompt}
- prompt_pos "Remove the masked object and fill the area so it matches the surroundings, keeping the same lighting. Keep everything else exactly unchanged."
+ addUserKnob {43 prompt_pos l Prompt t "Describe the edit. The model cannot see the Mask, so the masked area is tinted red in the image it receives: refer to it as 'the object highlighted in red', e.g. 'Replace the object highlighted in red with a wooden barrel'."}
+ prompt_pos "Remove the object highlighted in red and fill the area with the surrounding background, keeping the same lighting. Keep everything else exactly unchanged."
  addUserKnob {3 seed l Seed}
  seed 1234
  addUserKnob {3 steps l Steps}
@@ -29,9 +31,9 @@ Group {
  cfg 1
  addUserKnob {26 mask_div l Mask}
  addUserKnob {41 mask_channel l "Mask channel" T MaskSel.from0}
- addUserKnob {3 grow l "Grow (px)"}
+ addUserKnob {3 grow l "Grow (px)" t "Grows the Mask: sets the area highlighted in red for the model and the area composited over Source."}
  grow 8
- addUserKnob {7 feather l "Feather (px)" R 0 50}
+ addUserKnob {7 feather l "Feather (px)" t "Softens the edge of the composite over Source. Adjustable after generating, no re-run needed." R 0 50}
  feather 6
  addUserKnob {3 work_edge l "Working size (long edge)"}
  work_edge 1920
@@ -49,8 +51,8 @@ Group {
   ypos -300
   number 1
  }
-set Nee589200 [stack 0]
-push $Nee589200
+set Ncc12c480 [stack 0]
+push $Ncc12c480
  Copy {
   inputs 2
   from0 rgba.alpha
@@ -59,7 +61,7 @@ push $Nee589200
   xpos 300
   ypos -200
  }
-set Nee59ad00 [stack 0]
+set Ncc136000 [stack 0]
  Expression {
   expr0 a
   expr1 a
@@ -69,7 +71,7 @@ set Nee59ad00 [stack 0]
   xpos 500
   ypos -100
  }
-push $Nee59ad00
+push $Ncc136000
  FilterErode {
   channels alpha
   size {{-parent.grow}}
@@ -86,7 +88,8 @@ push $Nee59ad00
  }
  Read {
   inputs 0
-  file_type png
+  in_colorspace scene_linear
+  out_colorspace scene_linear
   name Result
   xpos 100
   ypos -100
@@ -98,7 +101,7 @@ push $Nee59ad00
   xpos 0
   ypos -300
  }
-set Nee588d80 [stack 0]
+set Ncc12c000 [stack 0]
  Keymix {
   inputs 3
   channels rgb
@@ -106,7 +109,7 @@ set Nee588d80 [stack 0]
   xpos 0
   ypos 60
  }
-push $Nee588d80
+push $Ncc12c000
  Switch {
   inputs 2
   which {{"parent.show_result * parent.has_result"}}

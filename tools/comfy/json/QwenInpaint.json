@@ -22,7 +22,7 @@
     "class_type": "ImageScale",
     "inputs": {
       "image": [
-        "1",
+        "32",
         0
       ],
       "upscale_method": "lanczos",
@@ -116,22 +116,6 @@
       ]
     }
   },
-  "16": {
-    "class_type": "SetLatentNoiseMask",
-    "inputs": {
-      "samples": [
-        "15",
-        0
-      ],
-      "mask": [
-        "5",
-        0
-      ]
-    },
-    "_meta": {
-      "title": "Limit sampling to mask"
-    }
-  },
   "17": {
     "class_type": "KSampler",
     "inputs": {
@@ -148,7 +132,7 @@
         1
       ],
       "latent_image": [
-        "16",
+        "15",
         0
       ],
       "seed": 1234,
@@ -220,6 +204,65 @@
     },
     "_meta": {
       "title": "NUKE_OUTPUT"
+    }
+  },
+  "30": {
+    "class_type": "EmptyImage",
+    "inputs": {
+      "width": [
+        "23",
+        0
+      ],
+      "height": [
+        "23",
+        1
+      ],
+      "batch_size": 1,
+      "color": 16711680
+    },
+    "_meta": {
+      "title": "Highlight color (red)"
+    }
+  },
+  "31": {
+    "class_type": "ImageBlend",
+    "inputs": {
+      "image1": [
+        "1",
+        0
+      ],
+      "image2": [
+        "30",
+        0
+      ],
+      "blend_factor": 0.45,
+      "blend_mode": "normal"
+    },
+    "_meta": {
+      "title": "Red tint"
+    }
+  },
+  "32": {
+    "class_type": "ImageCompositeMasked",
+    "inputs": {
+      "destination": [
+        "1",
+        0
+      ],
+      "source": [
+        "31",
+        0
+      ],
+      "x": 0,
+      "y": 0,
+      "resize_source": false,
+      "mask": [
+        "5",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Original with mask area highlighted in red"
     }
   }
 }

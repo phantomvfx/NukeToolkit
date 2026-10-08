@@ -1,0 +1,38 @@
+# KleinEdit - Flux.2 Klein image edit through ComfyUI (json/KleinEdit.json)
+# Converted from KleinEdit.gizmo (saved by Nuke 17.0v1, which Nuke 16 refuses to load) into a single top-level
+# Group: same knobs and Generate script, plus an Output so Source passes through. Imports in Nuke 16.1v4.
+#
+# Import: this is NOT a .gizmo and does not appear in the node toolbar. Use the NukeComfy menu, File > Import
+# Script, nuke.nodePaste(path), or paste this file's text into the node graph.
+# Generate needs NukeComfy on the plugin path (python/bridge.py) and a reachable ComfyUI (COMFY_URL, default
+# http://127.0.0.1:8188) with the OCIO nodes the template uses. The bridge renders the connected Source to an
+# ACES-compliant EXR, so it expects an OCIO (ACES) colour-managed script.
+set cut_paste_input [stack 0]
+version 16.1 v4
+push $cut_paste_input
+Group {
+ name KleinEdit
+ addUserKnob {20 User}
+ addUserKnob {1 template l "Workflow Template"}
+ template KleinEdit
+ addUserKnob {1 prompt_pos l "Positive Prompt"}
+ prompt_pos "change the scene to night lighting"
+ addUserKnob {2 ref_file l "Reference File"}
+ addUserKnob {3 seed l Seed}
+ seed 42
+ addUserKnob {3 steps l Steps}
+ steps 4
+ addUserKnob {7 cfg l CFG}
+ cfg 1
+ addUserKnob {22 generate l Generate T "import NukeComfy.python.bridge; NukeComfy.python.bridge.bridge.generate(nuke.thisNode())" +STARTLINE}
+ addUserKnob {1 status l Status}
+ status Done
+}
+ Input {
+  inputs 0
+  name Source
+ }
+ Output {
+  name Output1
+ }
+end_group

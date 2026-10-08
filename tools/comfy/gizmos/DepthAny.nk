@@ -1,0 +1,30 @@
+# DepthAny - depth estimation (Marigold) through ComfyUI (json/DepthAny.json)
+# Converted from DepthAny.gizmo (saved by Nuke 17.0v1, which Nuke 16 refuses to load) into a single
+# top-level Group: same knobs and Generate script, plus an Output so Source passes through.
+# Imports in Nuke 16.1v4.
+#
+# Import: this is NOT a .gizmo and does not appear in the node toolbar. Use the NukeComfy menu, File > Import
+# Script, nuke.nodePaste(path), or paste this file's text into the node graph.
+# Generate needs NukeComfy on the plugin path (python/bridge.py) and a reachable ComfyUI (COMFY_URL, default
+# http://127.0.0.1:8188) with the Load/Save EXR (ACEScg) nodes the template uses. The bridge renders the
+# connected Source to an ACES-compliant EXR, so it expects an OCIO (ACES) colour-managed script.
+set cut_paste_input [stack 0]
+version 16.1 v4
+push $cut_paste_input
+Group {
+ name DepthAny
+ addUserKnob {20 User}
+ addUserKnob {1 template l "Workflow Template"}
+ template DepthAny
+ addUserKnob {22 generate l Generate T "import NukeComfy.python.bridge; NukeComfy.python.bridge.bridge.generate(nuke.thisNode())" +STARTLINE}
+ addUserKnob {1 status l Status}
+ status Done
+}
+ Input {
+  inputs 0
+  name Source
+ }
+ Output {
+  name Output1
+ }
+end_group
