@@ -58,6 +58,11 @@ to fix, in plain language.
    * **Grid in mask**: connect a Roto (or any mask) to the second input. A grid of points is placed wherever its alpha is above 50%
      on the reference frame. *grid spacing* and *max points* control the density.
    * **Full-frame grid**: the same grid over the whole frame.
+
+   The grid is quick but blind: if something covers part of the surface on the reference frame (a thumb on a phone screen, a
+   person in front of a sign), grid points land on it and follow it instead of the surface. For those shots use **Tracker4**:
+   you only *place* the tracks (don't track them in the Tracker4), on features that belong to the surface and stay clear of the
+   occluder. Six to twelve well-spread points work better than four: with exactly four, outlier rejection has nothing to compare.
 4. Press **Track**. A progress bar shows the work, **Cancel** stops it. When it finishes, the *status* line shows the number of
    points, the percentage visible and the time.
 5. Go to the **Export** tab, choose what you want and press **Export**. The new node appears below TAPTrack, connected to it.
@@ -129,6 +134,7 @@ Every message TAPTrack shows has a **Details** line pointing at a log file in `~
 
 | You see | What it means / what to do |
 |---|---|
+| *No module named 'taptrack'* (when pressing a button) | This Nuke was started without TAPTrack on its plugin path (common when reopening a saved script). Run `install\add_to_nuke.ps1` once and restart Nuke, or open the script with `examples\open_demo.ps1 -Script <name>.nk`. |
 | *Model weights missing - run install/download_weights.* | The models were not downloaded. Run `install\download_weights.ps1`. |
 | *The TAPTrack tracker environment is not installed.* | Run `install\install.ps1`, or set **worker Python** in the Settings tab if it lives elsewhere. |
 | *No NVIDIA graphics card is available to the tracker* | Update the NVIDIA driver, or set **device** to `cpu` in Settings (much slower). |

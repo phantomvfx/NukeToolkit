@@ -1,0 +1,395 @@
+#! L:/Apps/Nuke16.1v4/nuke-16.1.4.dll -nx
+version 16.1 v4
+define_window_layout_xml {<?xml version="1.0" encoding="UTF-8"?>
+<layout version="1.0">
+    <window x="0" y="-6" w="1920" h="1010" maximized="1" screen="0">
+        <splitter orientation="1">
+            <split size="40"/>
+            <dock id="" hideTitles="1" activePageId="Toolbar.1">
+                <page id="Toolbar.1"/>
+            </dock>
+            <split size="1085" stretch="1"/>
+            <splitter orientation="2">
+                <split size="568"/>
+                <dock id="" activePageId="Viewer.1">
+                    <page id="Viewer.1"/>
+                </dock>
+                <split size="399"/>
+                <dock id="" activePageId="DAG.1" focus="true">
+                    <page id="DAG.1"/>
+                    <page id="Curve Editor.1"/>
+                    <page id="DopeSheet.1"/>
+                </dock>
+            </splitter>
+            <split size="787"/>
+            <dock id="" activePageId="Properties.1">
+                <page id="Properties.1"/>
+                <page id="uk.co.thefoundry.backgroundrenderview.1"/>
+                <page id="Scenegraph.1"/>
+                <page id="uk.co.thefoundry.scripteditor.1"/>
+            </dock>
+        </splitter>
+    </window>
+</layout>
+}
+Root {
+inputs 0
+gsv {
+__default__ {
+}
+__panel__ {
+tab {Main}
+}
+
+}
+name L:/NukeDevSandbox/taptrack/examples/phone_demo.nk
+frame 1079
+first_frame 1001
+last_frame 1182
+lock_range true
+format "3840 2160 0 0 3840 2160 1 UHD_4K"
+proxy_type scale
+proxy_format "1024 778 0 0 1024 778 1 1K_Super_35(full-ap)"
+colorManagement OCIO
+OCIO_config fn-nuke_cg-config-v2.2.0_aces-v1.3_ocio-v2.3
+defaultViewerLUT "OCIO LUTs"
+workingSpaceLUT scene_linear
+monitorLut "ACES 1.0 - SDR Video (sRGB - Display)"
+monitorOutLUT "ACES 1.0 - SDR Video (sRGB - Display)"
+int8Lut matte_paint
+int16Lut texture_paint
+logLut compositing_log
+floatLut scene_linear
+}
+NoOp {
+inputs 0
+name TAPTrack_Matchmove_valid
+label "valid: 1 = reliable fit, 0 = check this frame\nlink a Merge mix to this: mix = value * TAPTrack_Matchmove_valid.valid"
+xpos 2286
+ypos 21
+addUserKnob {20 User}
+addUserKnob {7 valid}
+valid {{curve x1001 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1}}
+}
+Read {
+inputs 0
+file_type exr
+file L:/NukeDevSandbox/taptrack/tests/footage/phone_exr_aces2065/phone_ACES2065-1.####.exr
+format "3840 2160 0 0 3840 2160 1 UHD_4K"
+first 1001
+last 1182
+origfirst 1001
+origlast 1182
+origset true
+colorspace ACES2065-1
+name Plate
+xpos 384
+ypos -459
+}
+Roto {
+inputs 0
+format "3840 2160 0 0 3840 2160 1 UHD_4K"
+curves {{{v x3f99999a}
+  {f 0}
+  {n
+   {layer Root
+    {f 2097664}
+    {t x44f00000 x44870000}
+    {a pt1x 0 pt1y 0 pt2x 0 pt2y 0 pt3x 0 pt3y 0 pt4x 0 pt4y 0 ptex00 0 ptex01 0 ptex02 0 ptex03 0 ptex10 0 ptex11 0 ptex12 0 ptex13 0 ptex20 0 ptex21 0 ptex22 0 ptex23 0 ptex30 0 ptex31 0 ptex32 0 ptex33 0 ptof1x 0 ptof1y 0 ptof2x 0 ptof2y 0 ptof3x 0 ptof3y 0 ptof4x 0 ptof4y 0 pterr 0 ptrefset 0 ptmot x40800000 ptref 0}
+    {curvegroup Bezier1 512 bezier
+     {{cc
+       {f 8192}
+       {px x447a4000
+        {0 0}
+        {x4520e000 x44a1c000}
+        {0 0}
+        {0 0}
+        {x45290800 x44909000}
+        {0 0}
+        {x41523400 x411c7180}
+        {x45288800 x448ce000}
+        {xc23a5100 xc20aaaa0}
+        {0 0}
+        {x451e2800 x44806000}
+        {0 0}
+        {0 0}
+        {x45154000 x44962000}
+        {0 0}
+        {xc2472a80 xc1c72a40}
+        {x451ec000 x44a0e000}
+        {x4160b300 x40e0b300}}}     idem}
+     {tx x447a4000 x451f5400 x44923400}
+     {a osw x41200000 osf 0 str 1 spx x44f00000 spy x44870000 sf x40000000 sb 1 ltn x447a4000 ltm x447a4000 tt x40800000}}}}}}
+toolbox {selectAll {
+  { selectAll str 1 ssx 1 ssy 1 sf 2 }
+  { createBezier str 1 ssx 1 ssy 1 sf 2 sb 1 tt 4 }
+  { createBezierCusped str 1 ssx 1 ssy 1 sf 2 sb 1 }
+  { createBSpline str 1 ssx 1 ssy 1 sf 2 sb 1 }
+  { createEllipse str 1 ssx 1 ssy 1 sf 2 sb 1 }
+  { createRectangle str 1 ssx 1 ssy 1 sf 2 sb 1 }
+  { createRectangleCusped str 1 ssx 1 ssy 1 sf 2 sb 1 }
+  { createOpenSpline str 1 ssx 1 ssy 1 sf 2 sb 1 }
+  { brush str 1 ssx 1 ssy 1 sf 2 sb 1 }
+  { eraser src 2 str 1 ssx 1 ssy 1 sf 2 sb 1 }
+  { clone src 1 str 1 ssx 1 ssy 1 sf 2 sb 1 }
+  { reveal src 3 str 1 ssx 1 ssy 1 sf 2 sb 1 }
+  { dodge src 1 str 1 ssx 1 ssy 1 sf 2 sb 1 }
+  { burn src 1 str 1 ssx 1 ssy 1 sf 2 sb 1 }
+  { blur src 1 str 1 ssx 1 ssy 1 sf 2 sb 1 }
+  { sharpen src 1 str 1 ssx 1 ssy 1 sf 2 sb 1 }
+  { smear src 1 str 1 ssx 1 ssy 1 sf 2 sb 1 }
+} }
+toolbar_brush_hardness 0.200000003
+toolbar_source_transform_scale {1 1}
+toolbar_source_transform_center {1920 1080}
+colorOverlay {0 0 0 0}
+lifetime_type "all frames"
+lifetime_start 1001
+lifetime_end 1001
+motionblur_shutter_offset_type centred
+source_black_outside true
+name Phone_Screen_Mask1
+xpos 1978
+ypos -54
+}
+Read {
+inputs 0
+file_type exr
+file L:/NukeDevSandbox/taptrack/tests/footage/phone_exr_aces2065/phone_ACES2065-1.####.exr
+format "3840 2160 0 0 3840 2160 1 UHD_4K"
+first 1001
+last 1182
+origfirst 1001
+origlast 1182
+origset true
+colorspace ACES2065-1
+name Plate1
+xpos 2126
+ypos -165
+}
+set Nc4662800 [stack 0]
+Group {
+inputs 2
+name TAPTrack_Phone1
+onCreate "import taptrack.node as _n; _n.refresh_status(nuke.thisNode())"
+knobChanged "import taptrack.node as _n; _n.on_knob_changed(nuke.thisNode(), nuke.thisKnob())"
+xpos 2126
+ypos -59
+addUserKnob {20 tt_tracking l Tracking}
+addUserKnob {4 model t "BootsTAPNext: best default, runs at 256x256.\nBootsTAPIR (offline): runs at 512x512, slower.\nTAPNext: older checkpoint, for comparison. BootsTAPIR (online): causal, slow with many points." M {BootsTAPNext TAPNext "BootsTAPIR (offline)" "BootsTAPIR (online)"}}
+addUserKnob {3 first l "frame range"}
+first 1001
+addUserKnob {3 last l "" -STARTLINE}
+last 1182
+addUserKnob {22 set_range l "Set from input" t "Use the plate's frame range." -STARTLINE T "import taptrack.node as _n; _n.set_range_from_input(nuke.thisNode())"}
+addUserKnob {3 ref_frame l "reference frame"}
+ref_frame 1001
+addUserKnob {22 set_ref l "Current frame" t "Track from the frame shown in the viewer." -STARTLINE T "import taptrack.node as _n; _n.set_ref_to_current(nuke.thisNode())"}
+addUserKnob {4 work_res l "working resolution" t "Frames are squashed to a square of this size for the network. Auto = the model's native size (256 for TAPNext, 512 for TAPIR). TAPNext is fixed at 256." M {Auto 256 384 512 Custom}}
+addUserKnob {3 work_custom l "custom size"}
+work_custom 512
+addUserKnob {26 div1 l "" +STARTLINE}
+addUserKnob {4 query_source l "points from" M {Tracker4 "Grid in mask" "Full-frame grid"}}
+query_source "Grid in mask"
+addUserKnob {1 tracker_node l "Tracker4 node"}
+addUserKnob {22 pick_tracker l "Pick selected" t "Use the selected Tracker4's tracks at the reference frame." -STARTLINE T "import taptrack.node as _n; _n.pick_tracker(nuke.thisNode())"}
+addUserKnob {3 grid_spacing l "grid spacing (px)"}
+grid_spacing 40
+addUserKnob {3 max_points l "max points"}
+max_points 300
+addUserKnob {26 div2 l "" +STARTLINE}
+addUserKnob {22 track l Track t "Render the plate, run the tracker, keep the result in the script." -STARTLINE T "import taptrack.node as _n; _n.on_track(nuke.thisNode())"}
+addUserKnob {22 cancel l Cancel t "Stop the running track." -STARTLINE T "import taptrack.node as _n; _n.on_cancel(nuke.thisNode())"}
+addUserKnob {22 clear_cache l "Clear cache" t "Delete the cached frames and result for this setup." -STARTLINE T "import taptrack.node as _n; _n.on_clear_cache(nuke.thisNode())"}
+addUserKnob {1 status +DISABLED}
+status "28 points | 100.0% visible | 15.5 s | bootstapnext"
+addUserKnob {20 tt_export l Export}
+addUserKnob {4 out_type l output t "Tracker4: every tracked point. CornerPin2D: four anchors (all points feed a robust fit). Transform: one motion fitted to all points, as a matchmove or a stabilize." M {Tracker4 CornerPin2D "Transform - Matchmove" "Transform - Stabilize"}}
+out_type "Transform - Matchmove"
+addUserKnob {4 fit_model l "transform model" M {Translate Translate+Rotate+Scale Affine}}
+fit_model Translate+Rotate+Scale
+addUserKnob {6 ransac l "reject outliers (RANSAC)" t "Fit on the points that agree with each other on each frame. Switch off only to compare." -STARTLINE}
+ransac true
+addUserKnob {6 prefer_continuous l "ignore re-acquired points when possible" t "Points that were occluded and found again can come back slightly offset. Use only points that stayed visible since the reference frame, unless there are too few." -STARTLINE}
+prefer_continuous true
+addUserKnob {4 smoothing M {none Gaussian}}
+addUserKnob {3 smooth_frames l "smooth (frames)"}
+smooth_frames 3
+addUserKnob {1 pin_points l "corner pin points" t "Four point numbers (as in the Tracker4 rows, 1-based), e.g. '3 17 40 8'. Empty = pick four well-spread, reliable points automatically."}
+addUserKnob {6 robust_pin l "corner pin from all points" t "On: the corners follow a homography fitted to every point (survives occlusion). Off: the corners follow the four raw tracks." -STARTLINE}
+robust_pin true
+addUserKnob {22 export l Export t "Create the node below this one." -STARTLINE T "import taptrack.node as _n; _n.on_export(nuke.thisNode())"}
+addUserKnob {20 tt_settings l Settings}
+addUserKnob {1 worker_python l "worker Python"}
+worker_python L:/NukeDevSandbox/taptrack/.venv/Scripts/python.exe
+addUserKnob {1 cache_dir l "cache folder"}
+cache_dir L:/Nuke_cache/taptrack_cache
+addUserKnob {4 device M {auto cuda cpu}}
+addUserKnob {4 precision M {fp16 bf16 fp32}}
+addUserKnob {1 ocio_in l "OCIO in"}
+ocio_in scene_linear
+addUserKnob {1 ocio_out l "OCIO out" t "The models were trained on display-referred sRGB video, so the plate is converted from scene-linear to sRGB before tracking."}
+ocio_out "sRGB - Display"
+addUserKnob {1 result_path +INVISIBLE}
+result_path L:/Nuke_cache/taptrack_cache/110ad611bc8bb7908cfe/result.json
+addUserKnob {1 worker_pid +INVISIBLE}
+addUserKnob {1 cancelled +INVISIBLE}
+}
+Input {
+inputs 0
+name mask
+xpos 110
+ypos -10
+number 1
+}
+Input {
+inputs 0
+name plate
+xpos -40
+ypos -10
+}
+set N9d156900 [stack 0]
+Reformat {
+type "to box"
+box_width 256
+box_height 256
+box_fixed true
+resize distort
+name tt_reformat
+xpos -40
+ypos 70
+}
+OCIOColorSpace {
+in_colorspace scene_linear
+out_colorspace "sRGB - Display"
+name tt_colorspace
+xpos -40
+ypos 130
+}
+Write {
+file L:/Nuke_cache/taptrack_cache/110ad611bc8bb7908cfe/frames/f.%04d.png
+file_type png
+colorspace Raw
+checkHashOnRead false
+version 4
+ocioColorspace scene_linear
+display "sRGB - Display"
+view "ACES 1.0 - SDR Video"
+name tt_write
+xpos -40
+ypos 190
+}
+push $N9d156900
+Output {
+name Output1
+xpos -190
+ypos 190
+}
+end_group
+push $Nc4662800
+RotoPaint {
+inputs 0
+curves {{{v x3f99999a}
+  {f 0}
+  {n
+   {layer Root
+    {f 2097152}
+    {t x44f00000 x44870000}
+    {a pt1x 0 pt1y 0 pt2x 0 pt2y 0 pt3x 0 pt3y 0 pt4x 0 pt4y 0 ptex00 0 ptex01 0 ptex02 0 ptex03 0 ptex10 0 ptex11 0 ptex12 0 ptex13 0 ptex20 0 ptex21 0 ptex22 0 ptex23 0 ptex30 0 ptex31 0 ptex32 0 ptex33 0 ptof1x 0 ptof1y 0 ptof2x 0 ptof2y 0 ptof3x 0 ptof3y 0 ptof4x 0 ptof4y 0 pterr 0 ptrefset 0 ptmot x40800000 ptref 0}
+    {curvegroup Bezier1 512 bezier
+     {{cc
+       {f 8192}
+       {px x447a4000
+        {0 0}
+        {x4521bccd x44a2599a}
+        {0 0}
+        {0 0}
+        {x4529a000 x4492599a}
+        {0 0}
+        {x40a3b200 x4137ff80}
+        {x4529d99a x448f599a}
+        {xc0e21000 xc17e1800}
+        {0 0}
+        {x45281000 x448b5333}
+        {0 0}
+        {0 0}
+        {x44f3b333 x44270ccd}
+        {0 0}
+        {0 0}
+        {x44e8e57c x442cf6dc}
+        {0 0}
+        {0 0}
+        {x44e14ea0 x444dcea1}
+        {0 0}
+        {xc0ba5d00 xc126bc00}
+        {x44e20666 x4453d99a}
+        {x40dac600 x4143bb80}
+        {xbea5e000 0}
+        {x44e48924 x44593508}
+        {x3f199800 0}
+        {0 0}
+        {x451e699a x44a1d333}
+        {0 xb9000000}
+        {xc1428600 xbf75b800}
+        {x451fe333 x44a28ccd}
+        {x41645b00 x3f903c00}}}     idem}
+     {tx x447a4000 x450c9c66 x4477d19a}
+     {a osw x41200000 osf 0 str 1 spx x44f00000 spy x44870000 sf x40000000 sb 1 ltn x447a4000 ltm x447a4000 tt x40800000}}}}}}
+toolbox {selectAll {
+  { selectAll str 1 ssx 1 ssy 1 sf 2 }
+  { createBezier str 1 ssx 1 ssy 1 sf 2 sb 1 tt 4 }
+  { createBezierCusped str 1 ssx 1 ssy 1 sf 2 sb 1 }
+  { createBSpline str 1 ssx 1 ssy 1 sf 2 sb 1 }
+  { createEllipse str 1 ssx 1 ssy 1 sf 2 sb 1 }
+  { createRectangle str 1 ssx 1 ssy 1 sf 2 sb 1 }
+  { createRectangleCusped str 1 ssx 1 ssy 1 sf 2 sb 1 }
+  { createOpenSpline str 1 ssx 1 ssy 1 sf 2 sb 1 }
+  { brush str 1 ssx 1 ssy 1 sf 2 sb 1 }
+  { eraser src 2 str 1 ssx 1 ssy 1 sf 2 sb 1 }
+  { clone src 1 str 1 ssx 1 ssy 1 sf 2 sb 1 }
+  { reveal src 3 str 1 ssx 1 ssy 1 sf 2 sb 1 }
+  { dodge src 1 str 1 ssx 1 ssy 1 sf 2 sb 1 }
+  { burn src 1 str 1 ssx 1 ssy 1 sf 2 sb 1 }
+  { blur src 1 str 1 ssx 1 ssy 1 sf 2 sb 1 }
+  { sharpen src 1 str 1 ssx 1 ssy 1 sf 2 sb 1 }
+  { smear src 1 str 1 ssx 1 ssy 1 sf 2 sb 1 }
+} }
+toolbar_brush_hardness 0.200000003
+toolbar_source_transform_scale {1 1}
+toolbar_source_transform_center {1920 1080}
+colorOverlay {0 0 0 0}
+lifetime_type "all frames"
+lifetime_start 1001
+lifetime_end 1001
+motionblur_shutter_offset_type centred
+source_black_outside true
+name RotoPaint2
+xpos 1860
+ypos 90
+}
+Transform {
+translate {{curve x1001 0 -2.529057815 -1.942617846 -1.465870198 -0.9510621327 -0.7611359408 -0.5851482195 -0.4479000774 -0.2604999982 -0.2457800518 -0.580592812 -1.106987924 -1.961940033 -3.331638522 -5.637664008 -7.582319064 -8.230627338 -8.856347619 -10.19105322 -11.81092312 -12.34333935 -11.85298822 -11.56454651 -13.9136438 -17.10998598 -20.76983964 -24.10574375 -25.24355871 -26.75019629 -26.66100742 -26.39952065 -26.84536988 -27.39758594 -27.41110347 -27.33637384 -27.45874604 -29.71091997 -31.62686671 -33.96929358 -36.38265402 -38.29903015 -39.89582512 -41.38268819 -41.98770421 -42.45621628 -42.803972 -43.28624542 -44.57668904 -46.16416675 -47.34045194 -47.58733965 -47.63770998 -48.17340897 -49.11332323 -49.98986526 -51.44858657 -52.87782038 -53.99218519 -54.83173391 -55.73659745 -55.66307282 -55.38154437 -54.45003472 -54.70678156 -54.48403131 -54.50656079 -52.18456849 -50.90719162 -49.83589935 -48.62394928 -49.40728054 -49.65302533 -50.38494168 -51.27842897 -56.4164854 -59.66800334 -59.62306482 -64.2346946 -65.49992718 -67.50836388 -69.88226921 -71.80126733 -74.18045443 -76.49020833 -78.12898566 -80.00124811 -82.33248005 -85.4037539 -87.49096559 -87.71923001 -88.24210765 -88.73622985 -89.22635375 -89.56431301 -88.85736787 -88.08767401 -87.13055783 -86.86759355 -87.04612838 -87.34948909 -88.89022411 -88.74375026 -88.47333451 -87.1573274 -86.8105669 -86.56579597 -86.56491573 -87.1583296 -85.52405557 -84.63999188 -83.7399238 -83.01804269 -84.61564404 -85.22404159 -87.90043957 -91.16113058 -93.63010009 -95.99207215 -96.41587712 -96.66678061 -97.27243855 -98.60255069 -100.1846467 -100.7205408 -100.1999929 -99.56283815 -98.87059401 -96.56625666 -93.95697295 -92.76861783 -92.73846807 -93.13140144 -93.15449243 -93.86684381 -92.07207879 -91.61436096 -93.07859786 -93.56599089 -92.57746515 -93.96035993 -95.1918006 -95.68838354 -95.76585074 -96.21537578 -97.0260471 -96.77760093 -97.03386342 -97.52252346 -98.25033071 -100.9382543 -102.0513812 -103.5456745 -105.0196644 -107.522257 -111.9067728 -115.2686578 -119.3402191 -121.0820668 -120.4187071 -118.6616674 -118.3342911 -118.1548892 -118.5435754 -118.4988149 -119.2953706 -120.7017822 -122.2857614 -123.9872734 -125.8047052 -127.0067707 -128.4772117 -130.0444179 -132.7508219 -132.4152009 -130.7078505 -129.8832095 -129.993805 -132.1877579 -133.2719456 -134.3804067 -134.9545817 -135.2581854} {curve x1001 0 -1.102250727 -3.329427861 -4.838150216 -6.181222936 -7.557216471 -9.207328148 -11.08680286 -12.66499443 -13.94981612 -15.49702494 -16.34084759 -16.31131748 -14.95197309 -11.71674821 -10.35759794 -12.62706844 -14.32871356 -15.10892278 -16.96847485 -21.81713023 -29.44281258 -34.99082547 -34.95260194 -33.6111146 -32.34517402 -32.31367289 -29.6822803 -30.04175168 -30.43652633 -30.52244747 -30.40439137 -29.76117893 -28.89880611 -27.43399945 -23.89087644 -23.03253349 -21.71520072 -18.73107444 -15.28501231 -12.66186713 -10.93456526 -10.85417293 -12.94360029 -15.2673264 -16.77994336 -17.72454736 -17.16483507 -15.26768219 -14.06699586 -14.26316922 -15.08175732 -15.49246972 -15.78119351 -15.81103552 -16.88601283 -18.19182184 -19.09744824 -19.31596914 -20.17047207 -21.38550992 -22.95842992 -24.0680657 -25.87665565 -27.3760292 -29.16370535 -32.46059246 -35.84759934 -37.24501111 -36.54039312 -35.86603036 -35.232368 -34.70762161 -31.42162468 -27.68875638 -20.58870199 -12.76895838 -9.512541167 -5.491948935 -2.379376934 0.6115905512 2.583346794 2.921630685 2.575165617 2.54194554 3.245404419 4.487342923 6.348506293 6.413180502 3.3978796 0.8211699777 -0.08056148972 -0.03638271632 0.512526036 0.09941510567 0.02250430838 -1.383588845 -1.984689649 -1.953104266 -1.586348118 0.7895949412 0.6327353614 -0.07239627833 -2.037503469 -2.836780731 -3.415180156 -3.960443841 -4.225868172 -7.735941415 -8.341599951 -9.979759939 -10.16453852 -7.53342532 -4.78046336 -3.118377904 -1.681179567 -0.9764775078 -2.115954511 -5.657377767 -8.28253082 -8.576399399 -7.056095071 -4.817945561 -3.976160515 -5.237438656 -7.258214561 -9.457360289 -12.8686361 -16.59664945 -19.61535933 -22.18192328 -24.62114514 -27.38897775 -30.45334965 -33.52587974 -34.68172159 -34.47022667 -34.4763428 -34.49233253 -34.67388311 -34.29205167 -34.22498165 -34.53532811 -35.57756926 -36.52022276 -36.9264115 -36.9331401 -36.89790736 -36.40444649 -35.92374167 -35.37230302 -35.08209266 -34.8541364 -33.5377299 -30.13819431 -26.78910345 -25.70678162 -27.14043204 -30.26080885 -32.25523154 -31.4755605 -30.4252208 -29.79640716 -29.47891547 -28.98156952 -29.52304506 -30.17574375 -30.66431258 -31.01902701 -30.76626753 -30.6837815 -30.79301309 -32.39326764 -33.36020973 -34.27395157 -35.48358723 -36.25693434 -36.44263009 -35.2432873 -34.24908058 -33.59661244 -33.29150131}}
+rotate {{curve x1001 -0 -0.2232356417 -0.4214145356 -0.4861904673 -0.5690407209 -0.7349895425 -0.8360908074 -0.8030213098 -0.7467379032 -0.6240691237 -0.474312252 -0.2730852706 -0.1139524416 -0.04087369543 0.1548608419 0.2585415565 0.07028661101 -0.05322629611 -0.1295367784 -0.3820350173 -0.5397419373 -1.108780349 -0.9138123037 -0.6695865701 -0.1434971941 0.1915668724 1.147025342 0.6307041733 0.5730516283 0.6116115194 0.5920166839 1.018726788 1.292502428 1.457332298 1.643767135 1.951621301 1.90456567 2.015243282 2.185050974 2.354675094 2.413158197 2.449311933 2.336183725 1.936066758 1.661854919 1.555121219 1.558262091 1.632948176 1.76497341 1.819381687 1.863069652 1.874222635 1.885480743 1.796614435 2.059632813 1.629107019 1.472579551 1.415412473 1.570505761 1.297628739 1.195949806 1.234556312 1.541922595 1.511817078 1.619690847 0.8611129582 0.9245079453 1.32940364 1.041017857 0.6052767112 0.8268518472 0.8267700521 0.9406397182 0.9360344222 1.599039306 2.395790568 1.890743863 2.509978417 2.521977632 2.744549127 2.865506493 3.117199661 3.30459232 3.303036973 3.271376185 3.33983766 3.513273074 3.880508628 3.798855446 3.265844239 3.096368631 3.003922395 3.033118335 3.024853177 3.470213997 3.414378541 3.185552673 3.120767583 3.189038603 3.335788186 2.589127594 2.520094152 2.439798882 2.399382909 2.364310293 2.328603098 2.174174532 2.194368993 2.714583797 2.407525808 1.829925921 1.997216774 2.368433624 3.065172437 2.972390932 3.069602415 3.217971018 2.940375684 2.466072238 2.35733044 2.440674783 2.601397569 3.131639495 3.192720584 3.161711356 3.073424426 3.124952795 2.88458664 2.934446646 2.958030179 2.803934799 2.693745505 2.783404904 2.145450033 2.747185729 2.830089712 2.024659736 2.090141298 2.170640235 2.545677104 2.54139074 2.61469408 2.760254325 2.750766312 2.52506718 2.857019353 2.783619761 2.752725501 2.546331401 2.362097731 2.372486564 2.24831168 2.255080014 2.359093658 2.711250214 3.620470258 4.087256888 4.304736539 4.169478973 4.098991199 4.286202073 5.663723307 4.318076238 4.411271422 4.508952969 4.633472793 4.820474022 5.131584359 5.179301606 5.307871777 5.675040533 5.658466434 5.222731167 4.944832856 4.68204784 4.294494207 4.195837012 4.437540691 4.466913003 4.6934742 4.720263448 4.721742648}}
+scale {{curve x1001 1 1.002289356 1.005721717 1.008371784 1.010845737 1.014305898 1.015918694 1.0186134 1.017957936 1.017475082 1.015403967 1.015374569 1.015133089 1.01507927 1.01272912 1.012763709 1.0190888 1.024552094 1.026420081 1.02945939 1.033609637 1.042313676 1.052476143 1.05291199 1.049104441 1.047760903 1.047078001 1.048975851 1.048821713 1.049648101 1.050780302 1.046733558 1.042325668 1.038935971 1.031448602 1.028100267 1.016865912 1.010483095 1.000459302 0.9944830576 0.9959401511 0.9995377932 1.000661506 1.006953049 1.011233285 1.013976832 1.015729621 1.016506337 1.016115862 1.01869076 1.020609375 1.023146396 1.025729677 1.027604185 1.031836237 1.033128267 1.036439363 1.038913205 1.042638206 1.0409107 1.040727955 1.042624879 1.050712798 1.050447313 1.052766499 1.051292555 1.056128715 1.058652003 1.059112803 1.050129404 1.047602305 1.044928365 1.044895189 1.045238227 1.052909011 1.05132516 1.038454789 1.045731224 1.040119057 1.035909733 1.029516056 1.022895864 1.018576683 1.01788497 1.017388874 1.01411726 1.010025538 1.004579677 1.00351694 1.006138756 1.007817362 1.008136527 1.007568201 1.007958482 1.026548406 1.030250939 1.011460332 1.011912416 1.010606223 1.008890286 1.016003417 1.016328196 1.017492987 1.030711902 1.034572735 1.037768307 1.035828137 1.036169557 1.014484948 1.045813185 1.038651845 1.04135396 1.039023603 1.052760534 1.039590784 1.030456606 1.024061995 1.023109055 1.030553756 1.030296929 1.028342719 1.025866002 1.021559745 1.021242776 1.02355437 1.024619499 1.023780536 1.025104996 1.029155399 1.035541163 1.038196746 1.041072558 1.041693781 1.046132027 1.057336411 1.056366798 1.049778001 1.049349744 1.047662443 1.045366175 1.042815752 1.046057662 1.046241204 1.043180774 1.041139289 1.043884729 1.046157057 1.047084091 1.049681684 1.050980732 1.05292674 1.055179901 1.057724868 1.058795423 1.054662221 1.05009554 1.044120121 1.041269933 1.047118546 1.048630959 1.046868615 1.050900626 1.047339597 1.049940599 1.047542112 1.049215507 1.0517963 1.05366404 1.057470033 1.055974737 1.062377698 1.064218302 1.058525803 1.057268934 1.053683115 1.055116361 1.056853931 1.06366526 1.063756125 1.066690522 1.06660765 1.06628203} {curve x1001 1 1.002289356 1.005721717 1.008371784 1.010845737 1.014305898 1.015918694 1.0186134 1.017957936 1.017475082 1.015403967 1.015374569 1.015133089 1.01507927 1.01272912 1.012763709 1.0190888 1.024552094 1.026420081 1.02945939 1.033609637 1.042313676 1.052476143 1.05291199 1.049104441 1.047760903 1.047078001 1.048975851 1.048821713 1.049648101 1.050780302 1.046733558 1.042325668 1.038935971 1.031448602 1.028100267 1.016865912 1.010483095 1.000459302 0.9944830576 0.9959401511 0.9995377932 1.000661506 1.006953049 1.011233285 1.013976832 1.015729621 1.016506337 1.016115862 1.01869076 1.020609375 1.023146396 1.025729677 1.027604185 1.031836237 1.033128267 1.036439363 1.038913205 1.042638206 1.0409107 1.040727955 1.042624879 1.050712798 1.050447313 1.052766499 1.051292555 1.056128715 1.058652003 1.059112803 1.050129404 1.047602305 1.044928365 1.044895189 1.045238227 1.052909011 1.05132516 1.038454789 1.045731224 1.040119057 1.035909733 1.029516056 1.022895864 1.018576683 1.01788497 1.017388874 1.01411726 1.010025538 1.004579677 1.00351694 1.006138756 1.007817362 1.008136527 1.007568201 1.007958482 1.026548406 1.030250939 1.011460332 1.011912416 1.010606223 1.008890286 1.016003417 1.016328196 1.017492987 1.030711902 1.034572735 1.037768307 1.035828137 1.036169557 1.014484948 1.045813185 1.038651845 1.04135396 1.039023603 1.052760534 1.039590784 1.030456606 1.024061995 1.023109055 1.030553756 1.030296929 1.028342719 1.025866002 1.021559745 1.021242776 1.02355437 1.024619499 1.023780536 1.025104996 1.029155399 1.035541163 1.038196746 1.041072558 1.041693781 1.046132027 1.057336411 1.056366798 1.049778001 1.049349744 1.047662443 1.045366175 1.042815752 1.046057662 1.046241204 1.043180774 1.041139289 1.043884729 1.046157057 1.047084091 1.049681684 1.050980732 1.05292674 1.055179901 1.057724868 1.058795423 1.054662221 1.05009554 1.044120121 1.041269933 1.047118546 1.048630959 1.046868615 1.050900626 1.047339597 1.049940599 1.047542112 1.049215507 1.0517963 1.05366404 1.057470033 1.055974737 1.062377698 1.064218302 1.058525803 1.057268934 1.053683115 1.055116361 1.056853931 1.06366526 1.063756125 1.066690522 1.06660765 1.06628203}}
+center {2554.285714 1165.714286}
+name TAPTrack_Matchmove
+label "TAPTrack matchmove (similarity)\n28 points, median 22 inliers/frame, rms 2.68 px"
+xpos 1860
+ypos 143
+}
+Merge2 {
+inputs 2
+name Merge1
+xpos 2058
+ypos 156
+}
+Viewer {
+frame 1079
+frame_range 1001-1182
+full_frame_processing true
+viewerProcess "ACES 1.0 - SDR Video (sRGB - Display)"
+monitorOutNDISenderName "NukeX - phone_demo - Viewer1"
+name Viewer1
+xpos 0
+ypos 350
+}

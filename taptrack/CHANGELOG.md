@@ -38,3 +38,13 @@
 - **Pick selected** looked for the selected Tracker4 inside TAPTrack and always said none was selected; it now looks next to TAPTrack. The Tracker4 is resolved by full name from the root.
 - **A plate that failed to render** showed "Something went wrong" instead of "Nuke could not render the plate frames" (the error path called `log()` without a message). Test: a Read of missing frames.
 - Tests: Export (all four types, top level and nested in a Group) and Pick selected + plan, each called the way the button calls them (`with group:`). The headless tests had called the functions from the root, which is why they missed this.
+
+### Live GUI test on 4K EXR (phone_exr_aces2065, Nuke 16.1)
+- Plate: 3840x2160 ACES2065-1 EXR, frames 1001-1182 (Read colorspace ACES2065-1). Saved as `examples/phone_demo.nk`.
+- Grid in mask (Roto over the phone screen, ref 1001, spacing 40): 96 points, 85% visible, 20.1 s with BootsTAPNext. Track,
+  CornerPin2D and Tracker4 export all worked from the buttons, exports at root.
+- Quality: the corner pin held at 1001/1050/1182 but overhung the phone around 1090-1130, and no frame was flagged as weak. Likely cause:
+  grid points on the thumb, which covers part of the screen on the reference frame. Placing points with a Tracker4 away from the
+  thumb gave a good result (user check). README now explains when to use Tracker4 instead of the grid.
+- Weak-frame detection does not catch a coherent group of wrong points (e.g. on an occluder): still open.
+- README troubleshooting: *No module named 'taptrack'* when a script is reopened in a Nuke without TAPTrack on its plugin path.
