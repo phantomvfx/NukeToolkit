@@ -1,0 +1,8 @@
+# Worker venv dependencies (torch itself is installed separately, see setup_venv.*)
+numpy
+opencv-python-headless
+pillow
+einops
+einshape
+dm-tree
+pytest

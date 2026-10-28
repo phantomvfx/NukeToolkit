@@ -18,3 +18,7 @@ Thumbs.db
 
 # Nuke
 *.autosave
+*.nk~
+
+# Logs
+*.log

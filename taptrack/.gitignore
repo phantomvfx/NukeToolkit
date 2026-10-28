@@ -1,0 +1,9 @@
+vendor/
+checkpoints/
+.venv/
+.pip-cache/
+__pycache__/
+*.pyc
+.pytest_cache/
+tests/_out/
+tests/footage/

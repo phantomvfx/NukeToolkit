@@ -1,0 +1,64 @@
+# CornerPinToOffset - tracked CornerPin2D + "To Offset" tab (Nuke 16 / written for 16.0 v6)
+#
+# A single CornerPin2D node. Your tracked "to" keyframes were moved, untouched, into the "Source Track" group
+# on the new "To Offset" tab (trk1..trk4). The real to1..to4 knobs are now expressions:
+#     toN = trkN + Enable * (Offset All + Offset N)
+#
+# "To Offset" tab:
+#   Enable Offset  - off = the pure tracked result (A/B).
+#   Offset All     - moves all four to points together.
+#   Offset 1..4    - moves one corner. 1 = bottom-left, 2 = bottom-right, 3 = top-right, 4 = top-left.
+#   Offsets are STATIC by default = permanent on every frame. To keyframe: right-click the knob > Set Animated
+#   (or press "Key All Offsets" to set a key on all of them at the current frame), then change values on other
+#   frames. Edit/delete keys in the Curve Editor. "Reset Offsets" zeroes everything and removes the keys.
+#
+# Edit the to points ONLY through the offsets - to1..to4 are expressions, so do not drag them in the Viewer.
+# To change the underlying track, edit the Source Track knobs (or paste new keys into them).
+# "Set to Current Frame" (Reference Frame tab) still works; it reads the final to points, offset included.
+#
+# Use: select the node's position in the DAG and paste (Ctrl+V) the text, or nuke.nodePaste(<this file>) /
+# File > Import Script. It will not appear in the node toolbar (it is a .nk, not a .gizmo).
+set cut_paste_input [stack 0]
+version 16.0 v6
+push $cut_paste_input
+CornerPin2D {
+ to1 {{trk1.x+enable_offset*(offset_all.x+off1.x)} {trk1.y+enable_offset*(offset_all.y+off1.y)}}
+ to2 {{trk2.x+enable_offset*(offset_all.x+off2.x)} {trk2.y+enable_offset*(offset_all.y+off2.y)}}
+ to3 {{trk3.x+enable_offset*(offset_all.x+off3.x)} {trk3.y+enable_offset*(offset_all.y+off3.y)}}
+ to4 {{trk4.x+enable_offset*(offset_all.x+off4.x)} {trk4.y+enable_offset*(offset_all.y+off4.y)}}
+ invert false
+ from1 {3644.26 1082}
+ from2 {4315 1078}
+ from3 {4062.95 1889.68}
+ from4 {3416.47 1749.49}
+ name CornerPin2D1
+ label "Reference Frame: None"
+ selected true
+ xpos -276
+ ypos -3411
+ addUserKnob {20 "Reference Frame"}
+ addUserKnob {22 set_frame l "Set to Current Frame" -STARTLINE T "myCornerPin = nuke.thisNode()\nto1 = myCornerPin\['to1'].getValue()\nto2 = myCornerPin\['to2'].getValue()\nto3 = myCornerPin\['to3'].getValue()\nto4 = myCornerPin\['to4'].getValue()\n\nfrom1 = myCornerPin.knob('from1')\nfrom2 = myCornerPin.knob('from2')\nfrom3 = myCornerPin.knob('from3')\nfrom4 = myCornerPin.knob('from4')\n\nfrom1.clearAnimated()\nfrom2.clearAnimated()\nfrom3.clearAnimated()\nfrom4.clearAnimated()\n\nnuke.thisNode().knob('from1').setValue(to1)\nnuke.thisNode().knob('from2').setValue(to2)\nnuke.thisNode().knob('from3').setValue(to3)\nnuke.thisNode().knob('from4').setValue(to4)\n\nnuke.thisNode().knob('ref_frame').setValue(nuke.frame())\n\nnuke.thisNode().knob('label').setValue('Reference Frame: \[value ref_frame]')"}
+ addUserKnob {3 ref_frame l "Reference Frame" +HIDDEN}
+ addUserKnob {20 offset_tab l "To Offset"}
+ addUserKnob {6 enable_offset l "Enable Offset" +STARTLINE}
+ enable_offset true
+ addUserKnob {12 offset_all l "Offset All"}
+ addUserKnob {26 div1 l "" +STARTLINE}
+ addUserKnob {12 off1 l "Offset 1 (BL)"}
+ addUserKnob {12 off2 l "Offset 2 (BR)"}
+ addUserKnob {12 off3 l "Offset 3 (TR)"}
+ addUserKnob {12 off4 l "Offset 4 (TL)"}
+ addUserKnob {26 div2 l "" +STARTLINE}
+ addUserKnob {22 key_offsets l "Key All Offsets" T "n = nuke.thisNode()\nf = nuke.frame()\nfor name in \['offset_all', 'off1', 'off2', 'off3', 'off4']:\n    k = n\[name]\n    v = \[k.getValue(0), k.getValue(1)]\n    if not k.isAnimated():\n        k.setAnimated()\n    k.setValueAt(v\[0], f, 0)\n    k.setValueAt(v\[1], f, 1)"}
+ addUserKnob {22 reset_offsets l "Reset Offsets" -STARTLINE T "n = nuke.thisNode()\nfor name in \['offset_all', 'off1', 'off2', 'off3', 'off4']:\n    k = n\[name]\n    k.clearAnimated()\n    k.setValue(0, 0)\n    k.setValue(0, 1)"}
+ addUserKnob {20 src_grp l "Source Track (original to points - do not edit)" n 1}
+ addUserKnob {12 trk1 l "Track 1"}
+ trk1 {{curve x1001 3650.26 3650.58 3650.75 3651.3 3651.66 3651.97 3652.07 3652.38 3652.53 3652.74 3653.17 3653.37 3653.74 3654.15 3654.44 3655.05 3655.67 3656.54 3656.84 3657.14 3657.33 3657.41 3657.54 3658.12 3658.61 3658.9 3659.13 3659.47 3659.87 3660.24 3660.74 3660.96 3661.23 3661.4 3661.49 3661.59 3661.79 3662.19 3662.26 3662.45 3662.75 3663.15 3663.54 3663.8 3664.25 3664.77 3665.05 3665.49 3665.67 3666.02 3666.64 3666.95 3667.48 3667.75 3667.82 3668.14 3668.71 3669.2 3669.44 3669.83 3669.91 3670.03 3670.25 3670.49 3670.82 3670.92 3671.25 3671.35 3671.5 3671.73 3671.97 3672.4 3672.63 3672.87 3672.94 3673 3673.05 3673.04} {curve x1001 1074 1073.81 1073.76 1073.7 1073.5 1073.24 1073.05 1072.79 1072.62 1072.25 1072.09 1071.61 1071.45 1071.35 1071.17 1071.05 1070.82 1070.37 1070.28 1070.02 1069.81 1069.76 1069.64 1069.26 1069.06 1068.99 1068.9 1068.67 1068.45 1068.2 1067.94 1067.92 1067.86 1067.75 1067.74 1067.74 1067.71 1067.73 1067.74 1067.75 1067.77 1067.77 1067.8 1067.82 1067.89 1067.91 1067.95 1068.11 1068.04 1068.16 1068.24 1068.21 1068.24 1068.24 1068.23 1068.28 1068.2 1068.14 1067.9 1067.93 1067.91 1067.74 1067.46 1067.36 1067.1 1066.98 1066.76 1066.72 1066.68 1066.62 1066.42 1066.19 1066.18 1065.82 1065.68 1065.64 1065.46 1065.43}}
+ addUserKnob {12 trk2 l "Track 2"}
+ trk2 {{curve x1001 4332.92 4333.41 4333.95 4334.74 4335.41 4335.91 4336.41 4336.97 4337.47 4338.01 4338.66 4339.24 4340.15 4340.99 4341.51 4342.47 4343.23 4344.08 4344.55 4345.58 4346.33 4346.81 4347.19 4348.12 4349.08 4349.7 4350.33 4350.97 4351.66 4352.39 4353.28 4353.72 4354.34 4354.81 4355.09 4355.51 4356.02 4356.74 4357.1 4357.53 4358.17 4358.81 4359.51 4360.06 4360.8 4361.64 4362.26 4362.89 4363.36 4364.02 4364.98 4365.62 4366.38 4366.93 4367.23 4367.87 4368.82 4369.64 4370.2 4370.96 4371.21 4371.62 4372.14 4372.68 4373.35 4373.71 4374.37 4374.66 4375.06 4375.53 4375.97 4376.6 4377.19 4377.57 4377.86 4378.05 4378.2 4378.3} {curve x1001 1060.05 1059.8 1059.78 1059.76 1059.57 1059.3 1059.05 1058.74 1058.46 1057.99 1057.76 1057.27 1056.99 1056.8 1056.56 1056.24 1056 1055.86 1055.79 1055.45 1054.81 1054.56 1054.47 1054.04 1053.73 1053.56 1053.43 1053.15 1052.85 1052.42 1052.01 1051.88 1051.77 1051.57 1051.51 1051.47 1051.42 1051.3 1051.23 1051.17 1051.1 1051.05 1051.01 1050.94 1050.91 1050.89 1050.91 1050.93 1050.83 1050.85 1050.83 1050.7 1050.67 1050.64 1050.58 1050.55 1050.42 1050.28 1049.94 1049.89 1049.83 1049.56 1049.21 1049.01 1048.69 1048.5 1048.18 1048.06 1048.05 1047.91 1047.66 1047.29 1047.15 1046.75 1046.55 1046.46 1046.24 1046.11}}
+ addUserKnob {12 trk3 l "Track 3"}
+ trk3 {{curve x1001 4076.95 4077.4 4078.14 4078.63 4079.18 4079.46 4079.95 4080.13 4080.62 4081.18 4081.91 4082.56 4083.37 4084.1 4084.91 4085.36 4085.28 4087.02 4087.13 4086.89 4087.04 4087.78 4088.19 4088.95 4089.91 4090.56 4091.22 4091.71 4092.41 4093.2 4094.15 4094.74 4095.31 4095.76 4096 4096.48 4096.97 4097.6 4098.1 4098.42 4099.02 4099.63 4100.25 4100.86 4101.55 4102.44 4103.05 4103.59 4104.05 4104.64 4105.66 4106.31 4107.12 4107.76 4107.96 4108.55 4109.47 4110.36 4110.81 4111.64 4111.87 4112.24 4112.65 4113.17 4113.84 4114.16 4114.86 4115.1 4115.49 4115.93 4116.35 4116.96 4117.69 4117.93 4118.27 4118.45 4118.58 4118.72} {curve x1001 1890.68 1891.25 1891.9 1892.6 1893.05 1893.4 1893.55 1893.61 1893.67 1893.96 1894.14 1894.27 1894.01 1893.9 1893.82 1893.74 1893.94 1894.55 1894.76 1894.96 1895.04 1895.27 1895.31 1895.29 1895.25 1895.32 1895.39 1895.41 1895.32 1895.28 1895.2 1895.27 1895.36 1895.4 1895.49 1895.81 1895.92 1895.98 1896.21 1896.33 1896.48 1896.68 1896.89 1897.04 1897.23 1897.5 1897.69 1898.06 1898.13 1898.3 1898.74 1898.75 1899.01 1899.22 1899.25 1899.54 1899.68 1899.77 1899.72 1899.91 1900.02 1900.02 1899.96 1899.9 1899.9 1899.88 1899.89 1899.88 1899.99 1900.03 1900.02 1899.83 1899.8 1899.71 1899.58 1899.55 1899.5 1899.42}}
+ addUserKnob {12 trk4 l "Track 4"}
+ trk4 {{curve x1001 3424.47 3424.75 3425.07 3425.38 3425.64 3425.76 3425.84 3425.83 3425.97 3426.19 3426.68 3426.92 3427.19 3427.51 3428.03 3428.21 3428.15 3429.74 3429.75 3429 3428.68 3428.96 3429.11 3429.55 3430.01 3430.32 3430.57 3430.78 3431.17 3431.59 3432.13 3432.46 3432.68 3432.83 3432.87 3433.02 3433.2 3433.51 3433.69 3433.78 3434.04 3434.42 3434.73 3435.04 3435.44 3435.99 3436.25 3436.61 3436.78 3437.06 3437.72 3438.03 3438.6 3438.93 3438.91 3439.19 3439.72 3440.25 3440.4 3440.83 3440.9 3440.97 3441.09 3441.31 3441.64 3441.7 3442.04 3442.11 3442.25 3442.44 3442.65 3443.07 3443.41 3443.52 3443.63 3443.67 3443.71 3443.73} {curve x1001 1748.49 1748.97 1749.46 1749.98 1750.3 1750.54 1750.68 1750.73 1750.84 1751.08 1751.26 1751.28 1751.14 1751.11 1751.06 1751.14 1751.26 1751.42 1751.55 1751.73 1752.11 1752.46 1752.45 1752.4 1752.42 1752.56 1752.63 1752.64 1752.6 1752.66 1752.67 1752.82 1752.93 1753.02 1753.13 1753.42 1753.52 1753.69 1753.95 1754.1 1754.3 1754.51 1754.74 1754.94 1755.19 1755.45 1755.62 1756.08 1756.14 1756.38 1756.85 1756.93 1757.21 1757.39 1757.46 1757.77 1757.91 1758.04 1758.04 1758.26 1758.39 1758.43 1758.39 1758.41 1758.41 1758.43 1758.49 1758.52 1758.59 1758.67 1758.68 1758.59 1758.67 1758.56 1758.49 1758.5 1758.45 1758.47}}
+ addUserKnob {20 endGroup n -1}
+}

@@ -1,0 +1,59 @@
+# DefocusTracker - Tracker4 wrapper with a Focus Profile switch (Nuke 16 / built and tested on 16.1v4)
+#
+# Saved as .nk (not .gizmo): a gizmo is an external file the toolbar loads by
+# reference, so a render farm node missing the file (wrong plugin path, farm
+# not synced, version mismatch) fails at render time. This .nk snippet embeds
+# the whole Group directly into whatever script imports it -- no external
+# dependency at render time. See CLAUDE.md "Nuke tool file format" convention.
+#
+# Input/Output: pass-through like the standard Tracker node (wraps one internal
+# Tracker4 node named "Track").
+#
+# "focus profile" knob (Sharp / In-Focus | Rack Defocus) retunes the inner
+# tracker's correlation settings on the fly:
+#   Sharp / In-Focus : epsilon 0.01, max_error 0.2, warp Translate/Rotate/Scale,
+#                      pattern-grab error threshold 0.02 (defaults).
+#   Rack Defocus     : epsilon 0.03, max_error 0.35, warp Translate-only (fewer
+#                      DOF so the solver doesn't hallucinate rotation/scale from
+#                      soft-edge noise), pattern-grab error threshold 0.08 (so
+#                      normal defocus softness isn't mistaken for drift and
+#                      re-grabbed every frame). Adjust-contrast pre-filter is
+#                      always on.
+#
+# For a shot that racks focus mid-track, track the sharp stretch on one
+# instance and the soft stretch on a second instance (switching profile
+# mid-track on one node is not handled) -- and widen the pattern/search box by
+# hand for the defocused region; box size is shot-specific and not automated.
+#
+# Use: nuke.nodePaste(<this file>) or File > Import Script, or paste directly
+# into a script's node graph (Edit > Node > Paste after copying this file's
+# text) -- it will NOT appear in the node toolbar the way a .gizmo does.
+set cut_paste_input [stack 0]
+version 16.1 v4
+push $cut_paste_input
+Group {
+name DefocusTracker
+help "DefocusTracker (target: Nuke 16)\n\nWraps the standard Tracker node with a Focus Profile switch that retunes correlation settings for rack-defocus footage:\n\nSharp / In-Focus: default-strength settings (tight epsilon/error, full Translate/Rotate/Scale warp).\n\nRack Defocus: adjust-contrast pre-filter, loosened epsilon/max_error so real defocus softness isn't mistaken for drift, Translate-only warp to avoid the solver hallucinating rotation/scale from soft-edge noise, and a looser pattern-grab error threshold so it doesn't re-grab a blurrier pattern every frame.\n\nFor a shot that racks focus mid-track: track the sharp stretch on the Sharp profile, switch to Rack Defocus for the soft stretch (a second instance of this node is cleaner than switching mid-track), and manually widen the pattern/search box for the defocused region -- box size is shot-specific and isn't automated here."
+onCreate "node = nuke.thisNode()\nknob = nuke.thisKnob()\nif knob.name() in ('focus_profile', 'onCreate'):\n    trk = node.node('Track')\n    profile = node\['focus_profile'].value()\n    trk\['pretrack_filter'].setValue('adjust contrast')\n    trk\['adjust_for_luminance_changes'].setValue(True)\n    trk\['grab_behaviour'].setValue('if error above')\n    if profile == 'Rack Defocus':\n        trk\['epsilon'].setValue(0.03)\n        trk\['max_error'].setValue(0.35)\n        trk\['warp'].setValue('t')\n        trk\['grab_error_above'].setValue(0.08)\n    else:\n        trk\['epsilon'].setValue(0.01)\n        trk\['max_error'].setValue(0.2)\n        trk\['warp'].setValue('srt')\n        trk\['grab_error_above'].setValue(0.02)\n    node\['label'].setValue(profile)\n"
+knobChanged "node = nuke.thisNode()\nknob = nuke.thisKnob()\nif knob.name() in ('focus_profile', 'onCreate'):\n    trk = node.node('Track')\n    profile = node\['focus_profile'].value()\n    trk\['pretrack_filter'].setValue('adjust contrast')\n    trk\['adjust_for_luminance_changes'].setValue(True)\n    trk\['grab_behaviour'].setValue('if error above')\n    if profile == 'Rack Defocus':\n        trk\['epsilon'].setValue(0.03)\n        trk\['max_error'].setValue(0.35)\n        trk\['warp'].setValue('t')\n        trk\['grab_error_above'].setValue(0.08)\n    else:\n        trk\['epsilon'].setValue(0.01)\n        trk\['max_error'].setValue(0.2)\n        trk\['warp'].setValue('srt')\n        trk\['grab_error_above'].setValue(0.02)\n    node\['label'].setValue(profile)\n"
+label "Sharp / In-Focus"
+selected true
+xpos 180
+ypos 3
+addUserKnob {20 User}
+addUserKnob {4 focus_profile l "focus profile" M {"Sharp / In-Focus" "Rack Defocus"}}
+}
+Input {
+ inputs 0
+ name Input1
+}
+Tracker4 {
+ adjust_for_luminance_changes true
+ warp srt
+ grab_error_above 0.02
+ name Track
+}
+Output {
+ name Output1
+}
+end_group

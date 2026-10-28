@@ -1,0 +1,93 @@
+# CamProjectSnap - camera projection Group (Nuke 16 / built and tested on 16.1v4)
+#
+# Inputs : 0 "cam" = Camera to project from   |  1 "img" = image to project
+# Output : 2D render (ScanlineRender) of the projected Card, seen through the live cam
+#
+# "Snap to current frame" button, on each click:
+#   - sets the internal FrameHold to the current timeline frame (Project3D uses the
+#     camera frozen at that frame)
+#   - bakes the camera's WORLD transform at that frame into the Card's translate/rotate
+#     (static copy, not a live link; parented/Axis-driven cameras are handled;
+#     Dots between the cam input and the Camera are followed)
+# "Z" knob is linked to the internal Card's z (positive = in front of the snapped camera).
+# "Overscan" knob is linked to the internal ScanlineRender's overscan; its shutter
+# offset defaults to "centered".
+#
+# Use: import with nuke.nodePaste(<this file>) or File > Import Script / drag into the DAG.
+set cut_paste_input [stack 0]
+version 16.1 v4
+push $cut_paste_input
+Group {
+ name CamProjectSnap
+ selected true
+ addUserKnob {20 User}
+ addUserKnob {22 snap l "Snap to current frame" -STARTLINE T "import nuke\ng = nuke.thisNode()\nsrc = g.input(0)\nwhile src is not None and src.Class() == \"Dot\":\n    src = src.input(0)\nif src is None or \"world_matrix\" not in src.knobs():\n    nuke.message(\"Connect a Camera to the 'cam' input first.\")\nelse:\n    import math\n    f = nuke.frame()\n    wm = src\[\"world_matrix\"]\n    m = nuke.math.Matrix4()\n    for r in range(4):\n        for c in range(4):\n            m\[c * 4 + r] = wm.getValueAt(f, r * 4 + c)\n    t = m.translation()\n    rot = \[math.degrees(a) for a in m.rotationsZXY()]\n    g.node(\"FrameHold_snap\")\[\"first_frame\"].setValue(f)\n    card = g.node(\"Card_snap\")\n    card\[\"translate\"].setValue(\[t\[0], t\[1], t\[2]])\n    card\[\"rotate\"].setValue(rot)\n"}
+ addUserKnob {41 Z T Card_snap.z}
+ addUserKnob {41 overscan l Overscan T ScanlineRender_snap.overscan}
+}
+ Input {
+  inputs 0
+  name cam
+  xpos 0
+  ypos -200
+ }
+ Dot {
+  name Dot1
+  xpos 34
+  ypos -100
+ }
+set N1f45b600 [stack 0]
+push $N1f45b600
+ FrameHold {
+  firstFrame 1
+  name FrameHold_snap
+  xpos 100
+  ypos -100
+ }
+ Input {
+  inputs 0
+  name img
+  xpos 200
+  ypos -300
+  number 1
+ }
+ Project3D2 {
+  inputs 2
+  crop false
+  name Project3D1
+  xpos 200
+  ypos -200
+ }
+ Card2 {
+  z 5
+  scaling {10 10 1}
+  uniform_scale 10
+  control_points {3 3 3 6 
+
+1 {-0.5 -0.5 0} 1 {0.1666666865 0 0} 1 {0 0 0} 1 {0 0.1666666865 0} 1 {0 0 0} 1 {0 0 0} 
+1 {0 -0.5 0} 1 {0.1666666716 0 0} 1 {-0.1666666716 0 0} 1 {0 0.1666666865 0} 1 {0 0 0} 1 {0.5 0 0} 
+1 {0.5 -0.5 0} 1 {0 0 0} 1 {-0.1666666865 0 0} 1 {0 0.1666666865 0} 1 {0 0 0} 1 {1 0 0} 
+1 {-0.5 0 0} 1 {0.1666666865 0 0} 1 {0 0 0} 1 {0 0.1666666716 0} 1 {0 -0.1666666716 0} 1 {0 0.5 0} 
+1 {0 0 0} 1 {0.1666666716 0 0} 1 {-0.1666666716 0 0} 1 {0 0.1666666716 0} 1 {0 -0.1666666716 0} 1 {0.5 0.5 0} 
+1 {0.5 0 0} 1 {0 0 0} 1 {-0.1666666865 0 0} 1 {0 0.1666666716 0} 1 {0 -0.1666666716 0} 1 {1 0.5 0} 
+1 {-0.5 0.5 0} 1 {0.1666666865 0 0} 1 {0 0 0} 1 {0 0 0} 1 {0 -0.1666666865 0} 1 {0 1 0} 
+1 {0 0.5 0} 1 {0.1666666716 0 0} 1 {-0.1666666716 0 0} 1 {0 0 0} 1 {0 -0.1666666865 0} 1 {0.5 1 0} 
+1 {0.5 0.5 0} 1 {0 0 0} 1 {-0.1666666865 0 0} 1 {0 0 0} 1 {0 -0.1666666865 0} 1 {1 1 0} }
+  name Card_snap
+  xpos 200
+  ypos -120
+ }
+push 0
+ ScanlineRender {
+  inputs 3
+  shutteroffset centered
+  name ScanlineRender_snap
+  xpos 200
+  ypos -40
+ }
+ Output {
+  name Output1
+  xpos 200
+  ypos 40
+ }
+end_group

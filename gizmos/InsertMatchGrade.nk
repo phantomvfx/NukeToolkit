@@ -1,0 +1,146 @@
+# InsertMatchGrade.nk -- target Nuke 16 (plain Expression/ColorMatrix/Grade nodes)
+#
+# Match grade for the surgical-monitor inserts, fitted to the reference still
+# ("first image"). Fitted on display-referred (sRGB) screenshots, so each chain is
+#   toSRGB (Expression) -> ColorMatrix -> Grade [-> Saturation] -> fromSRGB (Expression)
+# The sRGB conversions are Expression nodes (analytic sRGB curve): no OCIO
+# colorspace-name dependency. If your comp is ALREADY in sRGB/video space, disable
+# the two Expression nodes of the chain.
+#
+# Import: paste this file's text into the node graph (or File > Import Script).
+# It is NOT in the node toolbar. Connect each chain to its own insert, BEFORE the
+# merge/corner-pin over the monitor.
+#
+# v6 (replaces v1-v4 stacks of 2x Grade + 2x Saturation + trims/blacks fixes):
+#   ColorMatrix = a colour-transfer matrix (Monge-Kantorovich linear map between the
+#   insert's and the reference's RGB covariance, rows normalised to sum 1 so
+#   neutrals stay neutral). It pulls reds toward the reference's deep crimson
+#   (R>B>G) instead of orange/brown. The Grade then matches the per-channel levels.
+#   Grade add is kept >= 0 on G/B so blacks never crush to zero.
+#   Fit check on the insert pixels: strongest-red class (R-G>0.3) = R.44 G.10 B.18
+#   vs reference R.44 G.105 B.18; overall mean/p5/p50/p95 within ~0.01-0.03.
+# Not smoke-tested in Nuke -- fitted from low-res screenshots; nudge the Grade
+# multiply (exposure) by eye. If reds go the wrong way, transpose the ColorMatrix.
+# Monitor2 (small, far) was fitted from few pixels; its Saturation is a guess.
+set cut_paste_input [stack 0]
+version 16.0
+push $cut_paste_input
+Expression {
+ expr0 "r <= 0.0031308 ? r*12.92 : 1.055*pow(r,1/2.4)-0.055"
+ expr1 "g <= 0.0031308 ? g*12.92 : 1.055*pow(g,1/2.4)-0.055"
+ expr2 "b <= 0.0031308 ? b*12.92 : 1.055*pow(b,1/2.4)-0.055"
+ name toSRGB_Monitor1
+ xpos 0
+ ypos -40
+}
+ColorMatrix {
+ matrix {{1.289 -0.3557 0.0667} {-0.2048 1.0468 0.1579} {0.0318 0.1308 0.8374}}
+ name RedMatrix_Monitor1
+ label "colour transfer (deeper crimson reds)"
+ xpos 0
+ ypos 0
+}
+Grade {
+ multiply {0.306 0.415 0.599 1}
+ add {0.056 0 0 0}
+ gamma {1.413 1.868 1.742 1}
+ name MatchGrade_Monitor1
+ label "big monitor -> ref look"
+ xpos 0
+ ypos 40
+}
+Expression {
+ expr0 "r <= 0.04045 ? r/12.92 : pow((r+0.055)/1.055,2.4)"
+ expr1 "g <= 0.04045 ? g/12.92 : pow((g+0.055)/1.055,2.4)"
+ expr2 "b <= 0.04045 ? b/12.92 : pow((b+0.055)/1.055,2.4)"
+ name fromSRGB_Monitor1
+ xpos 0
+ ypos 80
+}
+push $cut_paste_input
+Expression {
+ expr0 "r <= 0.0031308 ? r*12.92 : 1.055*pow(r,1/2.4)-0.055"
+ expr1 "g <= 0.0031308 ? g*12.92 : 1.055*pow(g,1/2.4)-0.055"
+ expr2 "b <= 0.0031308 ? b*12.92 : 1.055*pow(b,1/2.4)-0.055"
+ name toSRGB_Monitor2
+ xpos 200
+ ypos -40
+}
+ColorMatrix {
+ matrix {{1.289 -0.3557 0.0667} {-0.2048 1.0468 0.1579} {0.0318 0.1308 0.8374}}
+ name RedMatrix_Monitor2
+ label "colour transfer (deeper crimson reds)"
+ xpos 200
+ ypos 0
+}
+Grade {
+ multiply {0.38 0.672 0.937 1}
+ add {0.106 -0.052 -0.075 0}
+ gamma {1.413 1.998 1.894 1}
+ name MatchGrade_Monitor2
+ label "2nd (small) monitor -> ref look"
+ xpos 200
+ ypos 40
+}
+Saturation {
+ saturation 1.1
+ name MatchSat_Monitor2
+ xpos 200
+ ypos 80
+}
+Expression {
+ expr0 "r <= 0.04045 ? r/12.92 : pow((r+0.055)/1.055,2.4)"
+ expr1 "g <= 0.04045 ? g/12.92 : pow((g+0.055)/1.055,2.4)"
+ expr2 "b <= 0.04045 ? b/12.92 : pow((b+0.055)/1.055,2.4)"
+ name fromSRGB_Monitor2
+ xpos 200
+ ypos 120
+}
+# ---------------------------------------------------------------------------
+# DEPTH TRIM for a monitor that sits far in the background (same stack otherwise).
+# Place Grade+Saturation INSIDE the sRGB section (between the MatchGrade and
+# fromSRGB_MonitorX); place Blur after the whole chain. Starting points by eye
+# (haze = lifted blacks, a little less gain and saturation, plus defocus), NOT fitted.
+Grade {
+ black {0.03 0.03 0.035 0}
+ multiply {0.9 0.9 0.9 1}
+ name DepthTrim_BG
+ label "bg monitor: haze + slightly dimmer"
+ xpos 400
+ ypos 0
+}
+Saturation {
+ saturation 0.9
+ name DepthTrimSat_BG
+ xpos 400
+ ypos 40
+}
+Blur {
+ size 1.5
+ name DepthBlur_BG
+ label "scale size to plate resolution / bezel softness"
+ xpos 400
+ ypos 80
+}
+# ---------------------------------------------------------------------------
+# v7: NATIVE-LINEAR big-monitor look -- just Grade + Saturation, no colorspace
+# nodes, no matrix. Input = normal linear working-space footage (Read NOT raw).
+# Fitted so that, viewed through the sRGB viewer, the insert's pixel distribution
+# matches the look reached with the v6 chain + ColorCorrect contrast 1.2 + lift
+# (mean, saturation, red classes, median and highlights within ~0.01-0.03; the
+# darkest ~5% is not matched: G ~0.013 vs ~0.035). A ColorCorrect contrast node
+# did not improve the fit, so it is left out. Not smoke-tested in Nuke.
+Grade {
+ multiply {0.6136 1.0652 1.1506 1}
+ add {0.1556 -0.05 0.0302 0}
+ gamma {0.459 0.609 0.618 1}
+ name MatchGrade_Linear
+ xpos 600
+ ypos 0
+}
+Saturation {
+ saturation 0.838
+ name MatchSat_Linear
+ xpos 600
+ ypos 40
+}
