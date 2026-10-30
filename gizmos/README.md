@@ -7,6 +7,9 @@ render farm nodes; a `.nk` snippet embeds the whole Group directly into
 whatever script imports it.
 
 - One subfolder per tool (or a flat layout, as the work dictates).
+- `BulletHitDebris.nk` — particle debris chips + dust spray burst for a bullet
+  hit on a table, 8-frame sim, placeable in 3D (Nuke 16, tested headless on a
+  synthetic shot). Built by `python/build_bullet_hit_debris.py`.
 - `CornerPinNudge.nk` — tracked CornerPin2D wrapped with static To/From
   nudge buttons, edge bleed and overscan limit (Nuke 16, untested in Nuke).
 - Each tool should carry a short header comment: what it does, its inputs/

@@ -4,6 +4,7 @@
 # Tools are .nk Groups in L:\Nuke\gizmos, pasted into the script on click
 # (no toolbar registration - see CLAUDE.md "Nuke tool file format").
 #
+#   BulletHitDebris -> gizmos/BulletHitDebris.nk
 #   CamProjectSnap  -> gizmos/CamProjectSnap.nk
 #   CopyCat Setup   -> gizmos/copycatsetup.nk
 #   Send to RV      -> sends the selected Read node(s) to RV (shortcut Ctrl+Alt+R)
@@ -63,6 +64,7 @@ def send_to_rv():
 
 def install():
     menu = nuke.menu("Nodes").addMenu("mllamas tools", icon=_MENU_ICON)
+    menu.addCommand("BulletHitDebris", lambda: paste_tool("BulletHitDebris.nk"))
     menu.addCommand("CamProjectSnap", lambda: paste_tool("CamProjectSnap.nk"))
     menu.addCommand("CopyCat Setup", lambda: paste_tool("copycatsetup.nk"))
     menu.addCommand("Send to RV", send_to_rv, RV_SHORTCUT, icon=_ICON)
