@@ -1,0 +1,93 @@
+{
+  "1": {
+    "inputs": {
+      "seed": 42,
+      "max_res_dimension": [
+        "6",
+        0
+      ],
+      "window_size": 14,
+      "time_step_size": 10,
+      "decode_chunk_size": 4,
+      "offload_pipe_to_cpu_on_finish": true,
+      "use_xformers": "disable",
+      "images": [
+        "11",
+        0
+      ]
+    },
+    "class_type": "NormalCrafterNode",
+    "_meta": {
+      "title": "NormalCrafter (Process Video)"
+    }
+  },
+  "6": {
+    "inputs": {
+      "image": [
+        "11",
+        0
+      ]
+    },
+    "class_type": "GetImageSize",
+    "_meta": {
+      "title": "Get Image Size"
+    }
+  },
+  "11": {
+    "inputs": {
+      "resize_type": "scale by multiplier",
+      "resize_type.multiplier": 0.5,
+      "scale_method": "nearest-exact",
+      "input": [
+        "17",
+        0
+      ]
+    },
+    "class_type": "ResizeImageMaskNode",
+    "_meta": {
+      "title": "Resize Image/Mask"
+    }
+  },
+  "14": {
+    "inputs": {
+      "filename_prefix": "Normal_EXR",
+      "color_space": "Raw (Keep Current)",
+      "images": [
+        "15",
+        0
+      ]
+    },
+    "class_type": "Save EXR (ACEScg)",
+    "_meta": {
+      "title": "Save EXR (ACEScg)"
+    }
+  },
+  "15": {
+    "inputs": {
+      "resize_type": "scale by multiplier",
+      "resize_type.multiplier": 2,
+      "scale_method": "nearest-exact",
+      "input": [
+        "1",
+        0
+      ]
+    },
+    "class_type": "ResizeImageMaskNode",
+    "_meta": {
+      "title": "Resize Image/Mask"
+    }
+  },
+  "17": {
+    "inputs": {
+      "image_path": "C:\\\\path\\\\to\\\\image.####.exr",
+      "color_space": "Raw (Keep ACEScg)",
+      "load_mode": "single_frame",
+      "frame_index": 1,
+      "sequence_limit": 0
+    },
+    "class_type": "Load EXR (ACEScg)",
+    "_meta": {
+      "title": "Load EXR (ACEScg)"
+    }
+  }
+}

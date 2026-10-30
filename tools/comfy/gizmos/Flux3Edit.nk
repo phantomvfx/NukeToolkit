@@ -1,0 +1,107 @@
+# Flux3Edit - reference-based image edit through ComfyUI (FLUX 3 Image Klein distilled, json/Flux3Edit.json)
+# Source is the image to edit (<ref_image_0> in the prompt). Ref1 to Ref4 are optional extra reference images
+# (<ref_image_1> to <ref_image_4>): name them in the prompt, e.g. "Put the jacket from <ref_image_1> on the
+# person in <ref_image_0>". The whole frame is regenerated at ~Megapixels and reformatted back to the Source size.
+# Target: Nuke 16.1 (built and tested on 16.1v4). A single top-level Group: the whole tool lives in the script,
+# nothing is loaded from the plugin path at render time.
+#
+# Import: this is NOT a .gizmo and does not appear in the node toolbar. Use the NukeComfy menu, File > Import
+# Script, nuke.nodePaste(path), or paste this file's text into the node graph.
+# Generate (current frame) needs NukeComfy on the plugin path (python/flux3edit.py) and a reachable ComfyUI
+# (COMFY_URL, default http://127.0.0.1:8188) with the FLUX 3 Image Klein models installed. Without them the group
+# still evaluates: it passes Source through until a result exists, then shows the baked Result Read.
+set cut_paste_input [stack 0]
+version 16.1 v4
+push $cut_paste_input
+Group {
+ name Flux3Edit
+ tile_color 0x4a7a99ff
+ label "\[value status]"
+ addUserKnob {20 user l Flux3Edit}
+ addUserKnob {1 template +INVISIBLE}
+ template Flux3Edit
+ addUserKnob {43 prompt_pos l Prompt t "Describe the edit. Source is <ref_image_0>, Ref1 is <ref_image_1> ... Ref4 is <ref_image_4>. With Upsample prompt on, a vision model expands a short request into a full caption using the images."}
+ prompt_pos "Change the scene to night lighting with cool blue moonlight. Keep all other parts of the image completely unchanged."
+ addUserKnob {6 upsample l "Upsample prompt" t "Expand the prompt with the Qwen3.5 prompt upsampler (loads a second 6.7 GB model, a bit slower). Off sends your prompt as is." +STARTLINE}
+ upsample true
+ addUserKnob {3 seed l Seed}
+ seed 42
+ addUserKnob {3 steps l Steps}
+ steps 16
+ addUserKnob {7 cfg l CFG R 1 10}
+ cfg 1
+ addUserKnob {7 megapixels l Megapixels t "Size the references are scaled to; the output takes the same size. Higher keeps more reference detail and costs more VRAM and time." R 0.25 4}
+ megapixels 1
+ addUserKnob {22 generate l Generate T "import NukeComfy.python.flux3edit\nNukeComfy.python.flux3edit.generate(nuke.thisNode())" +STARTLINE}
+ addUserKnob {6 show_result l "Show result" -STARTLINE}
+ show_result true
+ addUserKnob {6 has_result -STARTLINE +INVISIBLE}
+ addUserKnob {1 status l Status}
+ status Idle
+}
+ Input {
+  inputs 0
+  name Ref4
+  xpos 600
+  ypos -300
+  number 4
+ }
+ Input {
+  inputs 0
+  name Ref3
+  xpos 500
+  ypos -300
+  number 3
+ }
+ Input {
+  inputs 0
+  name Ref2
+  xpos 400
+  ypos -300
+  number 2
+ }
+ Input {
+  inputs 0
+  name Ref1
+  xpos 300
+  ypos -300
+  number 1
+ }
+ Input {
+  inputs 0
+  name Source
+  xpos 0
+  ypos -300
+ }
+set Nf3e00000 [stack 0]
+ Read {
+  inputs 0
+  name Result
+  xpos 150
+  ypos -150
+  disable {{!parent.has_result}}
+ }
+ Reformat {
+  type "to box"
+  box_width {{Source.width}}
+  box_height {{Source.height}}
+  box_fixed true
+  resize distort
+  name FitToSource
+  xpos 150
+  ypos -60
+ }
+push $Nf3e00000
+ Switch {
+  inputs 2
+  which {{"parent.show_result * parent.has_result"}}
+  name ShowResult
+  xpos 0
+  ypos 40
+ }
+ Output {
+  name Output1
+  xpos 0
+  ypos 120
+ }
+end_group

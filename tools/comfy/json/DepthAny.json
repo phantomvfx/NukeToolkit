@@ -1,0 +1,61 @@
+{
+  "26": {
+    "inputs": {
+      "image_path": "L:\\Projects\\NY_Aerial\\IO\\EXR\\Aerial_View_Lower_Manhattan_3840x2160.####.exr",
+      "color_space": "Raw (Keep ACEScg)",
+      "load_mode": "single_frame",
+      "frame_index": 1,
+      "sequence_limit": 0
+    },
+    "class_type": "Load EXR (ACEScg)",
+    "_meta": {
+      "title": "Load EXR (ACEScg)"
+    }
+  },
+  "28": {
+    "inputs": {
+      "filename_prefix": "DepthAny",
+      "color_space": "Raw (Keep Current)",
+      "images": [
+        "31",
+        0
+      ]
+    },
+    "class_type": "Save EXR (ACEScg)",
+    "_meta": {
+      "title": "Save EXR (ACEScg)"
+    }
+  },
+  "30": {
+    "inputs": {
+      "model": "prs-eth/marigold-depth-lcm-v1-0"
+    },
+    "class_type": "MarigoldModelLoader",
+    "_meta": {
+      "title": "MarigoldModelLoader"
+    }
+  },
+  "31": {
+    "inputs": {
+      "seed": 42,
+      "denoise_steps": 4,
+      "ensemble_size": 3,
+      "processing_resolution": 768,
+      "scheduler": "LCMScheduler",
+      "use_taesd_vae": false,
+      "keep_model_loaded": false,
+      "marigold_model": [
+        "30",
+        0
+      ],
+      "image": [
+        "26",
+        0
+      ]
+    },
+    "class_type": "MarigoldDepthEstimation_v2",
+    "_meta": {
+      "title": "MarigoldDepthEstimation_v2"
+    }
+  }
+}
