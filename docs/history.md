@@ -27,5 +27,9 @@ Pre-merge backups of the three `.git` folders, the `.gitignore` files, the
 `~/.nuke` startup files and the Claude settings are in `L:\Nuke_premerge_backup\`.
 
 New remote: `https://github.com/phantomvfx/NukeToolkit` (public, branch `main`).
-The old GitHub repos are still up. Archive them once the monorepo is pushed
-and verified.
+The three old GitHub repos were archived (read-only) the same day, after
+confirming their HEADs (`d36d002`, `69deff2`, `f7fd85a`) are in this history.
+
+`L:\Nuke_premerge_backup\NukeComfy.bak` is an old clone that was sitting in
+`~/.nuke`. It has uncommitted work at `fa30419` (modified `.gizmo`/`api.py`,
+plus `_old_api.py`) that never reached any repo.
