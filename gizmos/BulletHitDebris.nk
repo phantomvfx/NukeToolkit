@@ -2,8 +2,8 @@
 # Import: nuke.nodePaste("<path>/BulletHitDebris.nk"), File > Import Script, or paste
 #         this text into the Node Graph. NOT a .gizmo -- it will not be in the toolbar.
 # Inputs: img  plate (sets the output format)
-#         cam  shot camera. Connect one: Nuke's default camera sits inside the burst.
-#              No solve? Use any Camera looking at the table and place by eye.
+#         cam  shot camera (optional). Left empty, Nuke's default camera is used (origin,
+#              looking down -Z); the hit defaults to 1 m in front of it on the y=0 floor.
 #         axis optional parent for the placement, e.g. an Axis / CameraTracker locator on the table
 # Output: img with the burst merged over, or the premultiplied burst alone ("output" knob).
 # Timing: impact_frame = impact, +1..+4 main throw, fade to 0 by impact+8 (life knob).
@@ -86,7 +86,7 @@ Group {
   ypos 600
   number 1
  }
-set N9bd98480 [stack 0]
+set N970a8480 [stack 0]
  Input {
   inputs 0
   name axis
@@ -95,11 +95,12 @@ set N9bd98480 [stack 0]
   number 2
  }
  Axis2 {
+  translate {0 0 -1}
   name Placement
   xpos 1300
   ypos 440
  }
-set Ncabab400 [stack 0]
+set Nc5eab900 [stack 0]
  FillMat {
   inputs 0
   name holdout_mat
@@ -126,7 +127,7 @@ set Ncabab400 [stack 0]
   ypos 340
   disable {{!parent.table_holdout}}
  }
-set Ncababe00 [stack 0]
+set Nc5eac300 [stack 0]
  Constant {
   inputs 0
   format "128 128 0 0 128 128 1 BHD_sprite"
@@ -134,7 +135,7 @@ set Ncababe00 [stack 0]
   xpos 250
   ypos -520
  }
-set N9bda8000 [stack 0]
+set N970b8000 [stack 0]
  Noise {
   output alpha
   size 14
@@ -152,7 +153,7 @@ set N9bda8000 [stack 0]
   xpos 860
   ypos -360
  }
-push $N9bda8000
+push $N970b8000
  Rectangle {
   area {50 0 78 128}
   softness 3
@@ -195,7 +196,7 @@ push $N9bda8000
   xpos 750
   ypos -200
  }
-push $N9bda8000
+push $N970b8000
  Noise {
   output alpha
   size 45
@@ -213,7 +214,7 @@ push $N9bda8000
   xpos 610
   ypos -360
  }
-push $N9bda8000
+push $N970b8000
  Radial {
   area {10 20 118 108}
   softness 0.1
@@ -256,7 +257,7 @@ push $N9bda8000
   xpos 500
   ypos -200
  }
-push $N9bda8000
+push $N970b8000
  Noise {
   output alpha
   size 45
@@ -274,7 +275,7 @@ push $N9bda8000
   xpos 360
   ypos -360
  }
-push $N9bda8000
+push $N970b8000
  Radial {
   area {10 20 118 108}
   softness 0.1
@@ -332,6 +333,7 @@ push 0
   size_variation 0.8
   spread {{parent.debris_spread}}
   seed {{"parent.seed * 13 + 1"}}
+  translate {0 0.003 0}
   rotate {{parent.throw_dir.x} {parent.throw_dir.y} {parent.throw_dir.z}}
   name emit_debris
   xpos 500
@@ -382,13 +384,13 @@ push 0
   xpos 0
   ypos -700
  }
-set N9bd98000 [stack 0]
+set N970a8000 [stack 0]
  Remove {
   name bg_black
   xpos 0
   ypos 500
  }
-set Ncac36000 [stack 0]
+set Nc5f44500 [stack 0]
  ScanlineRender {
   inputs 3
   samples 10
@@ -412,10 +414,10 @@ set Ncac36000 [stack 0]
   xpos 500
   ypos 720
  }
-push $N9bd98480
-push $Ncabab400
-push $Ncababe00
-push $N9bda8000
+push $N970a8480
+push $Nc5eab900
+push $Nc5eac300
+push $N970b8000
  Noise {
   output alpha
   size 16
@@ -433,7 +435,7 @@ push $N9bda8000
   xpos 110
   ypos -360
  }
-push $N9bda8000
+push $N970b8000
  Radial {
   area {8 8 120 120}
   name dust_base
@@ -475,9 +477,9 @@ push $N9bda8000
   xpos 0
   ypos -200
  }
-set Ncaa80f00 [stack 0]
+set Nc5d80f00 [stack 0]
 push 0
-push $Ncaa80f00
+push $Nc5d80f00
 push 0
 push 0
  ParticleEmitter {
@@ -493,6 +495,7 @@ push 0
   size_variation 0.7
   spread {{parent.spray_spread}}
   seed {{"parent.seed * 13 + 3"}}
+  translate {0 0.003 0}
   rotate {{parent.throw_dir.x} {parent.throw_dir.y} {parent.throw_dir.z}}
   name emit_spray
   xpos 1000
@@ -510,8 +513,9 @@ push 0
   rotation_velocity_variation 1
   size {{parent.puff_size}}
   size_variation 0.5
-  spread 1
+  spread 0.7
   seed {{"parent.seed * 13 + 5"}}
+  translate {0 0.003 0}
   rotate {{parent.throw_dir.x} {parent.throw_dir.y} {parent.throw_dir.z}}
   name emit_puff
   xpos 1250
@@ -535,11 +539,20 @@ push 0
   xpos 1000
   ypos 80
  }
+ ParticleBounce {
+  out_bounce 0.05
+  out_friction 0.8
+  in_bounce 0.05
+  in_friction 0.8
+  name floor_dust
+  xpos 1000
+  ypos 100
+ }
  ParticleSettings {
   steps_per_frame 2
   name sim_dust
   xpos 1000
-  ypos 120
+  ypos 140
  }
  MergeGeo {
   inputs 2
@@ -553,7 +566,7 @@ push 0
   xpos 1000
   ypos 480
  }
-push $Ncac36000
+push $Nc5f44500
  ScanlineRender {
   inputs 3
   samples {{parent.mb_samples}}
@@ -588,9 +601,9 @@ push $Ncac36000
   xpos 750
   ypos 840
  }
-set Ncac38800 [stack 0]
-push $Ncac38800
-push $N9bd98000
+set Nc5f46d00 [stack 0]
+push $Nc5f46d00
+push $N970a8000
  Merge2 {
   inputs 2
   name over_plate

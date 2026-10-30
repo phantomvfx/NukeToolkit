@@ -33,8 +33,8 @@ HEADER = """\
 # Import: nuke.nodePaste("<path>/BulletHitDebris.nk"), File > Import Script, or paste
 #         this text into the Node Graph. NOT a .gizmo -- it will not be in the toolbar.
 # Inputs: img  plate (sets the output format)
-#         cam  shot camera. Connect one: Nuke's default camera sits inside the burst.
-#              No solve? Use any Camera looking at the table and place by eye.
+#         cam  shot camera (optional). Left empty, Nuke's default camera is used (origin,
+#              looking down -Z); the hit defaults to 1 m in front of it on the y=0 floor.
 #         axis optional parent for the placement, e.g. an Axis / CameraTracker locator on the table
 # Output: img with the burst merged over, or the premultiplied burst alone ("output" knob).
 # Timing: impact_frame = impact, +1..+4 main throw, fade to 0 by impact+8 (life knob).
@@ -215,6 +215,9 @@ def build():
         e["emit_channels"].setValue(ch)
         for i, c in enumerate("xyz"):
             e["rotate"].setExpression("parent.throw_dir.%s" % c, i)
+        # born 3 mm above the table so anything aimed downward bounces off it
+        # instead of starting inside and staying under the floor
+        e["translate"].setValue([0, 0.003, 0])
         e["start_frame"].setExpression("parent.impact_frame - 2")
         e["rate"].setExpression(RATE % count)
         e["seed"].setExpression("parent.seed * 13 + %d" % seed_offset)
@@ -259,7 +262,7 @@ def build():
     e_puff["velocity_variation"].setValue(1)
     e_puff["size"].setExpression("parent.puff_size")
     e_puff["size_variation"].setValue(0.5)
-    e_puff["spread"].setValue(1)
+    e_puff["spread"].setValue(0.7)
     e_puff["rotation_velocity"].setValue(5)
     e_puff["rotation_velocity_variation"].setValue(1)
     drag_dust = _place(nuke.nodes.ParticleDrag(name="drag_dust", inputs=[e_puff]), 1000, 0)
@@ -269,11 +272,19 @@ def build():
     turb = _place(nuke.nodes.ParticleTurbulence(name="dust_turbulence", inputs=[grav_dust]), 1000, 80)
     turb["strength"].setValue([0.01, 0.006, 0.01])
     turb["scale"].setValue([0.05, 0.05, 0.05])
-    sim_dust = _place(nuke.nodes.ParticleSettings(name="sim_dust", inputs=[turb]), 1000, 120)
+    # dust settles on the floor instead of sinking through it (the holdout cannot hide
+    # it when the camera sits at floor height, like Nuke's default camera)
+    floor_dust = _place(nuke.nodes.ParticleBounce(name="floor_dust", inputs=[turb]), 1000, 100)
+    for side in ("out", "in"):
+        floor_dust[side + "_bounce"].setValue(0.05)
+        floor_dust[side + "_friction"].setValue(0.8)
+    sim_dust = _place(nuke.nodes.ParticleSettings(name="sim_dust", inputs=[floor_dust]), 1000, 140)
     sim_dust["steps_per_frame"].setValue(2)
 
     # ------------------------------------------------------------ placement
     axis = _place(nuke.nodes.Axis2(name="Placement", inputs=[inp_axis]), 1300, 440)
+    # in view of Nuke's default camera, on the default floor
+    axis["translate"].setValue([0, 0, -1])
     # Holdout table top: FillMat (black, alpha 0) occludes without adding colour. Sits 3 mm
     # under y=0 so chips resting on the table are not cut in half.
     fill = _place(nuke.nodes.FillMat(name="holdout_mat"), 750, 300)
