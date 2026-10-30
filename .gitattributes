@@ -1,0 +1,8 @@
+# Normalize text to LF in the repo; Windows checkouts get CRLF via core.autocrlf.
+* text=auto
+
+*.png binary
+*.jpg binary
+*.exr binary
+*.mp4 binary
+*.mov binary

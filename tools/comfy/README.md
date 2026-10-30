@@ -4,18 +4,19 @@ A streamlined integration bridge between Nuke and ComfyUI. This repository provi
 
 ## Installation
 
-1. Clone or download this repository into your `.nuke` directory.
-   ```bash
-   cd ~/.nuke  # or C:\Users\<YourUser>\.nuke on Windows
-   git clone https://github.com/phantomvfx/NukeComfy.git
-   ```
+NukeComfy lives in `tools/comfy/` of the Nuke monorepo (it was previously `phantomvfx/NukeComfy`).
 
-2. Open your `.nuke/init.py` (create it if it doesn't exist) and add the following line:
+1. Clone the monorepo (on this machine it lives at `L:\Nuke`).
+
+2. Add one line to your `~/.nuke/init.py`:
    ```python
-   nuke.pluginAddPath('./NukeComfy')
+   nuke.pluginAddPath('L:/Nuke')   # the repo root, not tools/comfy
    ```
+   The root `init.py` puts `tools/comfy` on the plugin path and makes it importable as the
+   `NukeComfy` package. The Generate buttons in saved scripts use `import NukeComfy.python.…`,
+   so don't add `tools/comfy` on its own.
 
-3. Restart Nuke. You'll now see a "NukeComfy" menu inside the top menu bar containing the tools `KleinEdit`, `DepthAny`, `NormalCrafter` and `QwenInpaint`. They are `.nk` files (single Group snippets pasted into the script, not `.gizmo` files), so the node lives in the script itself. Scripts saved with the old `.gizmo` versions of the first three need those nodes replaced by the `.nk` groups (same knobs).
+3. Restart Nuke. You'll now see a "NukeComfy" menu inside the top menu bar containing the tools `KleinEdit`, `DepthAny`, `NormalCrafter`, `QwenInpaint` and `Flux3Edit`. They are `.nk` files (single Group snippets pasted into the script, not `.gizmo` files), so the node lives in the script itself. Scripts saved with the old `.gizmo` versions of the first three need those nodes replaced by the `.nk` groups (same knobs).
 
 ## QwenInpaint (object removal / replacement)
 

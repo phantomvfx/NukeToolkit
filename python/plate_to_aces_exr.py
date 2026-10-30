@@ -22,7 +22,7 @@ Usage (Nuke terminal mode)
   "C:\\Program Files\\Nuke16.0vX\\Nuke16.0.exe" -t plate_to_aces_exr.py <input.mov> <output_dir> [ACEScg|ACES2065-1]
 
 Example (SH010)
-  Nuke16.0.exe -t L:/NukeDevSandbox/python/plate_to_aces_exr.py ^
+  Nuke16.0.exe -t L:/Nuke/python/plate_to_aces_exr.py ^
       L:/NukeAiReel/02_shots/SH010_set_extension/01_plate/PF0018-01_Clip-1_REC709_2K.mov ^
       L:/NukeAiReel/02_shots/SH010_set_extension/01_plate/exr_acescg
 

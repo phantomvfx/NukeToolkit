@@ -1,5 +1,6 @@
-# Reference library — regenerable doc imports (see reference/nukeXX/README.md)
-reference/
+# Knowledge base: converted Nuke docs + tutorials (local-only, see knowledge/README.md)
+knowledge/*
+!knowledge/README.md
 
 # Python
 __pycache__/
@@ -7,6 +8,8 @@ __pycache__/
 *.egg-info/
 .venv/
 venv/
+env/
+.env
 
 # OS
 .DS_Store
@@ -16,9 +19,21 @@ Thumbs.db
 .vscode/
 .idea/
 
+# Claude Code personal settings
+.claude/settings.local.json
+
 # Nuke
 *.autosave
 *.nk~
 
 # Logs
 *.log
+
+# tools/comfy scratch: test renders and saved API prompts
+tools/comfy/curb_results/
+tools/comfy/tmp_*.json
+tools/comfy/nuke_comfy_temp/
+*.exr
+
+# tools/mcp preview render (written by capture_node_preview)
+tools/mcp/preview.png

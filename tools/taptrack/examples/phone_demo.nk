@@ -42,7 +42,7 @@ tab {Main}
 }
 
 }
-name L:/NukeDevSandbox/taptrack/examples/phone_demo.nk
+name L:/Nuke/tools/taptrack/examples/phone_demo.nk
 frame 1079
 first_frame 1001
 last_frame 1182
@@ -74,7 +74,7 @@ valid {{curve x1001 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 
 Read {
 inputs 0
 file_type exr
-file L:/NukeDevSandbox/taptrack/tests/footage/phone_exr_aces2065/phone_ACES2065-1.####.exr
+file L:/Nuke/tools/taptrack/tests/footage/phone_exr_aces2065/phone_ACES2065-1.####.exr
 format "3840 2160 0 0 3840 2160 1 UHD_4K"
 first 1001
 last 1182
@@ -155,7 +155,7 @@ ypos -54
 Read {
 inputs 0
 file_type exr
-file L:/NukeDevSandbox/taptrack/tests/footage/phone_exr_aces2065/phone_ACES2065-1.####.exr
+file L:/Nuke/tools/taptrack/tests/footage/phone_exr_aces2065/phone_ACES2065-1.####.exr
 format "3840 2160 0 0 3840 2160 1 UHD_4K"
 first 1001
 last 1182
@@ -221,7 +221,7 @@ robust_pin true
 addUserKnob {22 export l Export t "Create the node below this one." -STARTLINE T "import taptrack.node as _n; _n.on_export(nuke.thisNode())"}
 addUserKnob {20 tt_settings l Settings}
 addUserKnob {1 worker_python l "worker Python"}
-worker_python L:/NukeDevSandbox/taptrack/.venv/Scripts/python.exe
+worker_python L:/Nuke/tools/taptrack/.venv/Scripts/python.exe
 addUserKnob {1 cache_dir l "cache folder"}
 cache_dir L:/Nuke_cache/taptrack_cache
 addUserKnob {4 device M {auto cuda cpu}}

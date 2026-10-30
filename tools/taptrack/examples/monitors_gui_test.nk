@@ -34,7 +34,7 @@ define_window_layout_xml {<?xml version="1.0" encoding="UTF-8"?>
 }
 Root {
 inputs 0
-name L:/NukeDevSandbox/taptrack/examples/monitors_gui_test.nk
+name L:/Nuke/tools/taptrack/examples/monitors_gui_test.nk
 frame 81
 last_frame 232
 fps 25
@@ -63,7 +63,7 @@ set Ne868b700 [stack 0]
 Read {
 inputs 0
 file_type mov
-file L:/NukeDevSandbox/taptrack/tests/footage/monitors.mp4
+file L:/Nuke/tools/taptrack/tests/footage/monitors.mp4
 format "1920 1080 0 0 1920 1080 1 HD_1080"
 last 232
 origlast 232
@@ -126,7 +126,7 @@ robust_pin true
 addUserKnob {22 export l Export t "Create the node below this one." -STARTLINE T "import taptrack.node as _n; _n.on_export(nuke.thisNode())"}
 addUserKnob {20 tt_settings l Settings}
 addUserKnob {1 worker_python l "worker Python"}
-worker_python L:/NukeDevSandbox/taptrack/.venv/Scripts/python.exe
+worker_python L:/Nuke/tools/taptrack/.venv/Scripts/python.exe
 addUserKnob {1 cache_dir l "cache folder"}
 cache_dir L:/Nuke_cache/taptrack_cache
 addUserKnob {4 device M {auto cuda cpu}}

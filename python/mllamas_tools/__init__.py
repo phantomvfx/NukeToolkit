@@ -1,7 +1,7 @@
 # mllamas_tools - the "mllamas tools" menu for Nuke (target: Nuke 16).
 #
 # Loaded from ~/.nuke/menu.py:   import mllamas_tools; mllamas_tools.install()
-# Tools are .nk Groups in L:\NukeDevSandbox\gizmos, pasted into the script on click
+# Tools are .nk Groups in L:\Nuke\gizmos, pasted into the script on click
 # (no toolbar registration - see CLAUDE.md "Nuke tool file format").
 #
 #   CamProjectSnap  -> gizmos/CamProjectSnap.nk

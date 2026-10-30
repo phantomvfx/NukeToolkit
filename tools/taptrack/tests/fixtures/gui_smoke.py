@@ -8,7 +8,7 @@ import sys
 import threading
 import time
 
-ROOT = "L:/NukeDevSandbox/taptrack"
+ROOT = "L:/Nuke/tools/taptrack"
 sys.path.insert(0, ROOT + "/nuke")
 sys.path.insert(0, ROOT + "/tests/nuke_tests")
 sys.path.insert(0, ROOT + "/tests/fixtures")

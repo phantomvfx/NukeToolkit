@@ -34,7 +34,7 @@ define_window_layout_xml {<?xml version="1.0" encoding="UTF-8"?>
 }
 Root {
 inputs 0
-name L:/NukeDevSandbox/taptrack/examples/taptrack_demo.nk
+name L:/Nuke/tools/taptrack/examples/taptrack_demo.nk
 frame 49
 last_frame 241
 format "1920 1080 0 0 1920 1080 1 HD_1080"
@@ -59,7 +59,7 @@ ypos -75
 Read {
 inputs 0
 file_type mov
-file L:/NukeDevSandbox/taptrack/tests/footage/kling25_wall_handheld.mp4
+file L:/Nuke/tools/taptrack/tests/footage/kling25_wall_handheld.mp4
 last 241
 colorspace sRGB
 name Plate
@@ -120,7 +120,7 @@ robust_pin true
 addUserKnob {22 export l Export t "Create the node below this one." -STARTLINE T "import taptrack.node as _n; _n.on_export(nuke.thisNode())"}
 addUserKnob {20 tt_settings l Settings}
 addUserKnob {1 worker_python l "worker Python"}
-worker_python L:/NukeDevSandbox/taptrack/.venv/Scripts/python.exe
+worker_python L:/Nuke/tools/taptrack/.venv/Scripts/python.exe
 addUserKnob {1 cache_dir l "cache folder"}
 cache_dir L:/Nuke_cache/taptrack_cache
 addUserKnob {4 device M {auto cuda cpu}}

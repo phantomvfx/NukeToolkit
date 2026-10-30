@@ -91,7 +91,7 @@ def capture_node_preview(node_name: str = None, frame: int = None) -> Image:
         node_name: Name of the node to capture. If None, captures the node plugged into the active Viewer.
         frame: Frame number to render. If None, uses current playhead frame.
     """
-    preview_file = "L:/NukeMCP/preview.png"
+    preview_file = (Path(__file__).resolve().parent / "preview.png").as_posix()
     
     code = f"""
 import os

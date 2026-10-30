@@ -6,7 +6,7 @@ gsv {
 __default__ {
 }
 }
-name L:/NukeDevSandbox/taptrack/tests/fixtures/tracker4_reference.nk
+name L:/Nuke/tools/taptrack/tests/fixtures/tracker4_reference.nk
 last_frame 15
 format "1920 1080 0 0 1920 1080 1 HD_1080"
 proxy_type scale
