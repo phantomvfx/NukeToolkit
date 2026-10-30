@@ -2,7 +2,7 @@ import socket
 import json
 import os
 from pathlib import Path
-from mcp.server.mcpserver import MCPServer, Imager
+from mcp.server.mcpserver import MCPServer, Image
 
 # Initialize MCP 2.x Server
 mcp = MCPServer("NukeX-Bridge")
