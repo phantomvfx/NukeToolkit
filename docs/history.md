@@ -23,13 +23,13 @@ Also changed in the merge:
 - The `nuke` MCP server is registered at the new path.
 - Hardcoded `L:/NukeDevSandbox` and `L:/NukeMCP` paths were updated.
 
-Pre-merge backups of the three `.git` folders, the `.gitignore` files, the
-`~/.nuke` startup files and the Claude settings are in `L:\Nuke_premerge_backup\`.
+A pre-merge backup (`L:\Nuke_premerge_backup\`) was deleted on 2026-10-30
+after the new loader was verified in a live Nuke 16.1 GUI session.
 
 New remote: `https://github.com/phantomvfx/NukeToolkit` (public, branch `main`).
 The three old GitHub repos were archived (read-only) the same day, after
 confirming their HEADs (`d36d002`, `69deff2`, `f7fd85a`) are in this history.
 
-`L:\Nuke_premerge_backup\NukeComfy.bak` is an old clone that was sitting in
-`~/.nuke`. It has uncommitted work at `fa30419` (modified `.gizmo`/`api.py`,
-plus `_old_api.py`) that never reached any repo.
+An old `~/.nuke/NukeComfy.bak` clone had uncommitted work. It was an early
+draft of the title-marker refactor that later landed in the repo, so it was
+discarded with the backup.
