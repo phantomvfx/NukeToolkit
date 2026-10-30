@@ -26,5 +26,6 @@ Also changed in the merge:
 Pre-merge backups of the three `.git` folders, the `.gitignore` files, the
 `~/.nuke` startup files and the Claude settings are in `L:\Nuke_premerge_backup\`.
 
+New remote: `https://github.com/phantomvfx/NukeToolkit` (public, branch `main`).
 The old GitHub repos are still up. Archive them once the monorepo is pushed
 and verified.
