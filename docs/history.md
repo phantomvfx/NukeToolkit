@@ -27,8 +27,10 @@ A pre-merge backup (`L:\Nuke_premerge_backup\`) was deleted on 2026-10-30
 after the new loader was verified in a live Nuke 16.1 GUI session.
 
 New remote: `https://github.com/phantomvfx/NukeToolkit` (public, branch `main`).
-The three old GitHub repos were archived (read-only) the same day, after
-confirming their HEADs (`d36d002`, `69deff2`, `f7fd85a`) are in this history.
+The three old GitHub repos were archived the same day, then deleted. Before
+that, their HEADs (`d36d002`, `69deff2`, `f7fd85a`) were confirmed to be in
+this history, so their full history lives on here. GitHub keeps deleted repos
+restorable for 90 days (Settings → Repositories → Deleted repositories).
 
 An old `~/.nuke/NukeComfy.bak` clone had uncommitted work. It was an early
 draft of the title-marker refactor that later landed in the repo, so it was

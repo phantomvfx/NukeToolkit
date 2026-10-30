@@ -26,4 +26,4 @@ weights, ComfyUI models) is in [docs/setup.md](docs/setup.md).
 Working with Claude Code: see [`CLAUDE.md`](CLAUDE.md) and the agents and
 commands in [`.claude/`](.claude/).
 
-Repo: https://github.com/phantomvfx/NukeToolkit. Previously three repos: `phantomvfx/NukeDevSandbox`, `phantomvfx/NukeComfy` and `phantomvfx/NukeMCP`.
+Repo: https://github.com/phantomvfx/NukeToolkit. Previously three repos (now deleted): `phantomvfx/NukeDevSandbox`, `phantomvfx/NukeComfy` and `phantomvfx/NukeMCP`.
