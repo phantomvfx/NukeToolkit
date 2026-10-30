@@ -31,9 +31,10 @@ Tools: `execute_python`, `get_node_graph`, `create_node`, `capture_node_preview`
 - Timeouts: the listener gives the main thread `MAIN_THREAD_TIMEOUT` = 60 s to
   pick a snippet up (a render in progress or a modal dialog blocks it), and
   the server's socket waits 75 s. Keep the server timeout the longer of the two.
-- Server-side tools build Python by f-string interpolation. Watch the
-  quoting: a `'` in a node name or path breaks the snippet. Prefer passing
-  values through `json.dumps`.
+- Server-side tools never interpolate values into snippet source. Pass them
+  with `with_args(code, name=value, ...)`, which prepends `args = {...!r}`,
+  and read `args['name']` in the snippet. Quotes, backslashes and newlines in
+  names, paths and knob values are then safe. Don't write f-string snippets.
 - `preview.png` is written next to the server file and is gitignored.
 - The `.venv` isn't committed. Recreate it with
   `py -3.10 -m venv .venv; .venv\Scripts\pip install mcp`.

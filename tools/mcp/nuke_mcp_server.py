@@ -36,6 +36,14 @@ def send_to_nuke(code: str) -> dict:
     except Exception as e:
         return {"status": "error", "error": str(e)}
 
+def with_args(code: str, **args) -> str:
+    """Prepend an `args` dict to a snippet so values never go through string interpolation.
+
+    repr() of str/int/float/bool/None/list/dict is a valid Python literal, so quotes,
+    backslashes and newlines in node names, paths or knob values can't break the snippet.
+    """
+    return f"args = {args!r}\n{code}"
+
 # ==========================================
 # BASE TOOLS
 # ==========================================
@@ -70,19 +78,12 @@ def create_node(node_class: str, knobs: dict = None) -> str:
         node_class: The class of the node to create.
         knobs: Optional dictionary of knob names and values to assign.
     """
-    knob_setup = ""
-    if knobs:
-        for k, v in knobs.items():
-            if isinstance(v, str):
-                knob_setup += f"n['{k}'].setValue('{v}'); "
-            else:
-                knob_setup += f"n['{k}'].setValue({v}); "
-
-    code = f"""
-n = nuke.createNode('{node_class}')
-{knob_setup}
-result = f"Created node: {{n.name()}}"
-"""
+    code = with_args("""
+n = nuke.createNode(args['node_class'])
+for k, v in (args['knobs'] or {}).items():
+    n[k].setValue(v)
+result = 'Created node: ' + n.name()
+""", node_class=node_class, knobs=knobs)
     res = send_to_nuke(code)
     return str(res.get("result", res.get("error")))
 
@@ -101,13 +102,13 @@ def capture_node_preview(node_name: str = None, frame: int = None) -> Image:
     """
     preview_file = (Path(__file__).resolve().parent / "preview.png").as_posix()
     
-    code = f"""
+    code = with_args("""
 import os
 
 # If no node specified, find whatever is plugged into the active Viewer
 target = None
-if '{node_name}' != 'None':
-    target = nuke.toNode('{node_name}')
+if args['node_name'] is not None:
+    target = nuke.toNode(args['node_name'])
 else:
     viewer = nuke.activeViewer()
     if viewer:
@@ -116,10 +117,10 @@ else:
 if not target:
     result = "Error: Target node not found."
 else:
-    f = {frame} if {frame is not None} else int(nuke.frame())
-    out_path = '{preview_file}'
+    f = args['frame'] if args['frame'] is not None else int(nuke.frame())
+    out_path = args['out_path']
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
-    
+
     # Render 1 frame as PNG
     w = nuke.nodes.Write(inputs=[target], file=out_path, file_type='png')
     try:
@@ -127,7 +128,7 @@ else:
         result = out_path
     finally:
         nuke.delete(w)
-"""
+""", node_name=node_name, frame=frame, out_path=preview_file)
     res = send_to_nuke(code)
     
     if res.get("status") == "ok" and res.get("result") == preview_file:
@@ -165,7 +166,10 @@ def set_current_frame(frame: int) -> str:
     """
     Moves the Nuke timeline cursor/playhead to a specific frame number.
     """
-    code = f"nuke.frame({frame}); result = f'Moved timeline to frame {frame}'"
+    code = with_args(
+        "nuke.frame(args['frame']); result = 'Moved timeline to frame %d' % args['frame']",
+        frame=frame,
+    )
     res = send_to_nuke(code)
     return str(res.get("result", res.get("error")))
 
@@ -202,19 +206,20 @@ def replace_filepaths(old_pattern: str, new_pattern: str) -> str:
     Searches and replaces filepath substrings across all Read, Write, and Geo nodes in the DAG.
     Useful for remounting drives or migrating project directories.
     """
-    code = f"""
+    code = with_args("""
 import json
+old, new = args['old_pattern'], args['new_pattern']
 updated = []
 for n in nuke.allNodes():
     for knob_name in ['file', 'vfield_file']:
         if knob_name in n.knobs():
             val = n[knob_name].value()
-            if '{old_pattern}' in val:
-                new_val = val.replace('{old_pattern}', '{new_pattern}')
+            if old in val:
+                new_val = val.replace(old, new)
                 n[knob_name].setValue(new_val)
-                updated.append(f"{{n.name()}}: {{val}} -> {{new_val}}")
+                updated.append(f"{n.name()}: {val} -> {new_val}")
 result = json.dumps(updated, indent=2)
-"""
+""", old_pattern=old_pattern, new_pattern=new_pattern)
     res = send_to_nuke(code)
     return str(res.get("result", res.get("error")))
 
