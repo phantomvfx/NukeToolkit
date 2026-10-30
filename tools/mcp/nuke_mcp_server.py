@@ -14,12 +14,20 @@ def send_to_nuke(code: str) -> dict:
     """Helper function to dispatch Python commands to the running Nuke instance."""
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.settimeout(15)  # Extended to 15s to allow single-frame preview renders
+            s.settimeout(75)  # longer than the listener's MAIN_THREAD_TIMEOUT (60s)
             s.connect((HOST, PORT))
             payload = json.dumps({"code": code}).encode('utf-8')
             s.sendall(payload)
-            response = s.recv(65536).decode('utf-8')
-            return json.loads(response)
+            # The listener closes the connection after replying; read it all
+            chunks = []
+            while True:
+                chunk = s.recv(65536)
+                if not chunk:
+                    break
+                chunks.append(chunk)
+            return json.loads(b''.join(chunks).decode('utf-8'))
+    except socket.timeout:
+        return {"status": "error", "error": "Timed out waiting for Nuke (no reply in 75s)."}
     except ConnectionRefusedError:
         return {
             "status": "error",

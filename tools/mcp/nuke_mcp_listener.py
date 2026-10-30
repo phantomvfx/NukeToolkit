@@ -13,6 +13,14 @@ Protocol
 Request  (JSON): {"code": "<python code to execute>"}
 Response (JSON): {"status": "ok",    "result": <value>}
                   {"status": "error", "error": "<message>"}
+
+Threading
+---------
+Sockets are handled on background threads, but in the GUI the code itself
+runs on Nuke's main thread (nuke.executeInMainThread). Running nuke.execute()
+or DAG edits from a background thread can deadlock the GUI. If the main
+thread doesn't pick the code up within MAIN_THREAD_TIMEOUT (busy render,
+modal dialog), the caller gets an error. The code may still run later.
 """
 
 import json
@@ -27,10 +35,60 @@ except ImportError:
 
 HOST = '127.0.0.1'
 PORT = 54321
+MAIN_THREAD_TIMEOUT = 60  # seconds; nuke_mcp_server's socket timeout must be longer
 
 _listener_thread = None
 _stop_event = threading.Event()
 _lock = threading.Lock()
+
+
+def _run_code(code):
+    """Execute code in a fresh namespace and return its `result` variable."""
+    namespace = {'nuke': nuke, '__builtins__': __builtins__, 'result': None}
+    exec(compile(code, '<nuke_mcp>', 'exec'), namespace)
+    return namespace.get('result')
+
+
+def _run_on_main_thread(code):
+    """Run code on Nuke's main thread in the GUI, or inline in terminal mode."""
+    if nuke is None or not nuke.GUI or threading.current_thread() is threading.main_thread():
+        return _run_code(code)
+
+    done = threading.Event()
+    out = {}
+
+    def task():
+        try:
+            out['value'] = _run_code(code)
+        except Exception as exc:
+            out['error'] = f"{exc}\n{traceback.format_exc()}"
+        finally:
+            done.set()
+
+    nuke.executeInMainThread(task)
+    if not done.wait(MAIN_THREAD_TIMEOUT):
+        raise TimeoutError(
+            f"Nuke's main thread did not run the code within {MAIN_THREAD_TIMEOUT}s "
+            "(busy render or a modal dialog open?). It may still run later."
+        )
+    if 'error' in out:
+        raise RuntimeError(out['error'])
+    return out.get('value')
+
+
+def _recv_json(conn):
+    """Read until the buffered bytes parse as one JSON object (payloads can exceed one recv)."""
+    data = b''
+    while True:
+        chunk = conn.recv(65536)
+        if not chunk:
+            break
+        data += chunk
+        try:
+            return json.loads(data.decode('utf-8'))
+        except ValueError:
+            continue
+    return json.loads(data.decode('utf-8')) if data else None
 
 
 def _handle_client(conn):
@@ -38,18 +96,10 @@ def _handle_client(conn):
     response = {'status': 'error', 'error': 'No response generated.'}
     try:
         conn.settimeout(10)
-        data = conn.recv(65536).decode('utf-8')
-        if not data:
+        payload = _recv_json(conn)
+        if payload is None:
             return
-        payload = json.loads(data)
-        code = payload.get('code', '')
-
-        # Execute in a fresh namespace seeded with nuke and builtins.
-        namespace = {'nuke': nuke, '__builtins__': __builtins__}
-        namespace['result'] = None
-        exec(compile(code, '<nuke_mcp>', 'exec'), namespace)
-
-        response = {'status': 'ok', 'result': namespace.get('result')}
+        response = {'status': 'ok', 'result': _run_on_main_thread(payload.get('code', ''))}
     except Exception as exc:
         response = {
             'status': 'error',
@@ -57,7 +107,9 @@ def _handle_client(conn):
         }
     finally:
         try:
-            conn.sendall(json.dumps(response).encode('utf-8'))
+            # default=str: a non-JSON result (e.g. a Node) must still produce a reply,
+            # otherwise the caller waits for its full socket timeout.
+            conn.sendall(json.dumps(response, default=str).encode('utf-8'))
         except Exception:
             pass
         conn.close()
