@@ -36,6 +36,26 @@ and loads it back into the Group.
 - Output pickup: `COMFYUI_OUTPUT_DIR` (default `C:\ComfyUI\output`). Scratch
   renders (`curb_results/`, `tmp_*.json`) are gitignored.
 
+## Contract with ComfyUI-EXR-ACEScg (`L:\ComfyUIClaude`)
+
+The EXR node pack is developed in the sister project `L:\ComfyUIClaude`. Its
+own sessions may change it, so check its `git log` before relying on a
+behaviour. NukeComfy depends on:
+
+| Node class | Inputs NukeComfy sets | Used by |
+|---|---|---|
+| `Load EXR (ACEScg)` | `image_path`, `color_space`, `load_mode`, `frame_index`, `sequence_limit` | `DepthAny.json`, `Normals.json`; `api.py` patches `image_path` on the `NUKE_INPUT` node |
+| `Save EXR (ACEScg)` | `images`, `filename_prefix`, `color_space` | `DepthAny.json`, `Normals.json` |
+
+- Class names and these input names must not change. New inputs should be
+  optional, so the existing API-format JSONs keep validating.
+- Output pickup: `polling.py` first looks for the saved file in the
+  history `ui` output, then falls back to the newest `*.exr` in
+  `COMFYUI_OUTPUT_DIR`. The 2026-10-30 rework of the pack reports
+  `{"ui": {"images": [...]}}` and names files `<prefix>_00001.exr`.
+- Lint a workflow with `python L:\ComfyUIClaude\tools\workflow_lint.py tools/comfy/json/<file>.json`.
+  With ComfyUI running it also flags missing node packs.
+
 ## Testing
 
 - No automated tests. Verify against a running ComfyUI: the `comfy-mcp` MCP

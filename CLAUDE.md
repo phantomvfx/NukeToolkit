@@ -28,6 +28,25 @@ L:\Nuke\
 **Before working inside `tools/<x>/`, read that tool's `CLAUDE.md`.** Each
 one has hard rules that override general habits; TAPTrack's are the strictest.
 
+## Related project: `L:\ComfyUIClaude`
+
+Sister workspace for ComfyUI custom nodes, workflow tooling and the local
+ComfyUI setup (`L:\ComfyUI`, models on `D:\ComfyUI_Models`). It has its own
+`CLAUDE.md` and Claude sessions. NukeComfy depends on it:
+
+- **`ComfyUI-EXR-ACEScg`** (`phantomvfx/ComfyUI-EXR-ACEScg`; dev clone in
+  `L:\ComfyUIClaude`, the copy ComfyUI loads is in `L:\ComfyUI\custom_nodes`)
+  provides the `Load EXR (ACEScg)` and `Save EXR (ACEScg)` nodes used by
+  `tools/comfy/json/DepthAny.json` and `Normals.json`, and by
+  `python/api.py` (KleinEdit EXR input). The contract is listed in
+  `tools/comfy/CLAUDE.md`.
+- Before changing NukeComfy's ComfyUI side (workflows, node usage, output
+  pickup), read `L:\ComfyUIClaude\CLAUDE.md` and check the node pack's
+  `git status` and `git log` for changes in flight. If a Claude session is
+  running there, coordinate by message instead of editing its files.
+- Use the `comfy-mcp` tools and the `comfyui-local` skill to drive ComfyUI.
+  Use `L:\ComfyUIClaude\tools\workflow_lint.py` to check a workflow JSON.
+
 ## Nuke version targeting
 
 State the target Nuke version when starting on a tool. If none is given,
