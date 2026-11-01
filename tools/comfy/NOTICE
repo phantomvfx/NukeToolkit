@@ -1,0 +1,8 @@
+NukeComfy
+Copyright 2026 phantomvfx
+
+Flux3Klein (python/flux3klein_graph.py, json/Flux3Klein.json) adapts the edit captions and the two-pass masked
+Klein edit from AInVFX Paint a plate (https://github.com/AInVFX/ainvfx-paintaplate, commit 63854ef),
+Copyright AInVFX, licensed under the Apache License, Version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
+Changes: ported from JavaScript to Python, crop coordinates, a replace caption for edits without strokes, both passes
+in one ComfyUI prompt, EXR in and out, Fit to Plate and SeedVR2 around it.

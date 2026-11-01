@@ -4,7 +4,7 @@ echo ====================================================
 echo             AI STUDIO NUKE LAUNCHER
 echo ====================================================
 echo.
-echo [1] Local GPU (Tailscale Workstation)
+echo [1] Local GPU (this machine, 127.0.0.1)
 echo [2] Cloud GPU (RunPod)
 echo.
 
@@ -25,7 +25,7 @@ goto launch
 :local
 echo.
 echo Targeting Local Workstation...
-set COMFY_URL=http://100.87.37.6:8188
+set COMFY_URL=http://127.0.0.1:8188
 set COMFY_LABEL=Local GPU
 goto launch
 

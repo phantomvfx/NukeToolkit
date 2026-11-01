@@ -1,0 +1,49 @@
+{
+  "1": {"class_type": "UNETLoader", "inputs": {"unet_name": "flux3-image-klein-int8-convrot.safetensors", "weight_dtype": "default"}, "_meta": {"title": "Load Diffusion Model"}},
+  "2": {"class_type": "CLIPLoader", "inputs": {"clip_name": "qwen3vl_4b_int8_convrot.safetensors", "type": "flux3", "device": "default"}, "_meta": {"title": "Load CLIP"}},
+  "3": {"class_type": "VAELoader", "inputs": {"vae_name": "flux2-vae.safetensors"}, "_meta": {"title": "Load VAE"}},
+
+  "10": {"class_type": "Load EXR (ACEScg)", "inputs": {"image_path": "example.exr", "color_space": "Convert ACEScg to Linear sRGB", "load_mode": "single_frame", "frame_index": 1, "sequence_limit": 0}, "_meta": {"title": "NUKE_SOURCE"}},
+  "11": {"class_type": "ImageColorSpace", "inputs": {"image": ["10", 0], "source": "linear", "destination": "sRGB"}, "_meta": {"title": "Source to sRGB"}},
+  "13": {"class_type": "ImageScaleToTotalPixels", "inputs": {"image": ["11", 0], "upscale_method": "lanczos", "megapixels": 2.0, "resolution_steps": 16}, "_meta": {"title": "NUKE_WORKSIZE"}},
+  "14": {"class_type": "GetImageSize", "inputs": {"image": ["13", 0]}, "_meta": {"title": "Working size"}},
+  "15": {"class_type": "MaskToImage", "inputs": {"mask": ["10", 1]}, "_meta": {"title": "Mask to image"}},
+  "16": {"class_type": "ImageScale", "inputs": {"image": ["15", 0], "upscale_method": "bilinear", "width": ["14", 0], "height": ["14", 1], "crop": "disabled"}, "_meta": {"title": "Mask at working size"}},
+  "17": {"class_type": "ImageToMask", "inputs": {"image": ["16", 0], "channel": "red"}, "_meta": {"title": "Edit mask"}},
+
+  "20": {"class_type": "Load EXR (ACEScg)", "inputs": {"image_path": "example_guide.exr", "color_space": "Convert ACEScg to Linear sRGB", "load_mode": "single_frame", "frame_index": 1, "sequence_limit": 0}, "_meta": {"title": "NUKE_GUIDE"}},
+  "21": {"class_type": "ImageColorSpace", "inputs": {"image": ["20", 0], "source": "linear", "destination": "sRGB"}, "_meta": {"title": "Guide to sRGB"}},
+  "22": {"class_type": "ImageScale", "inputs": {"image": ["21", 0], "upscale_method": "lanczos", "width": ["14", 0], "height": ["14", 1], "crop": "disabled"}, "_meta": {"title": "NUKE_EDIT_IMAGE"}},
+
+  "30": {"class_type": "CLIPTextEncode", "inputs": {"text": "", "clip": ["2", 0]}, "_meta": {"title": "NUKE_PROMPT"}},
+  "31": {"class_type": "ConditioningZeroOut", "inputs": {"conditioning": ["30", 0]}, "_meta": {"title": "Conditioning Zero Out"}},
+
+  "80": {"class_type": "ImageScaleToTotalPixels", "inputs": {"image": ["22", 0], "upscale_method": "lanczos", "megapixels": 0.6, "resolution_steps": 16}, "_meta": {"title": "NUKE_QUICK_IMAGE"}},
+  "81": {"class_type": "GetImageSize", "inputs": {"image": ["80", 0]}, "_meta": {"title": "Quick size"}},
+  "82": {"class_type": "ImageScale", "inputs": {"image": ["15", 0], "upscale_method": "bilinear", "width": ["81", 0], "height": ["81", 1], "crop": "disabled"}, "_meta": {"title": "Mask at quick size"}},
+  "83": {"class_type": "ImageToMask", "inputs": {"image": ["82", 0], "channel": "red"}, "_meta": {"title": "Quick mask"}},
+  "84": {"class_type": "GrowMask", "inputs": {"mask": ["83", 0], "expand": 8, "tapered_corners": true}, "_meta": {"title": "NUKE_QUICK_GROW"}},
+  "85": {"class_type": "ReferenceMultiLatent", "inputs": {"positive": ["30", 0], "negative": ["31", 0], "vae": ["3", 0], "resolution": "keep resolution", "images.image0": ["80", 0]}, "_meta": {"title": "NUKE_QUICK_REFS"}},
+  "86": {"class_type": "VAEEncode", "inputs": {"pixels": ["80", 0], "vae": ["3", 0]}, "_meta": {"title": "Quick start"}},
+  "87": {"class_type": "SetLatentNoiseMask", "inputs": {"samples": ["86", 0], "mask": ["84", 0]}, "_meta": {"title": "Quick noise mask"}},
+  "88": {"class_type": "KSampler", "inputs": {"model": ["1", 0], "seed": 7, "steps": 16, "cfg": 1.0, "sampler_name": "euler", "scheduler": "simple", "positive": ["85", 0], "negative": ["85", 1], "latent_image": ["87", 0], "denoise": 1.0}, "_meta": {"title": "NUKE_QUICK_SAMPLER"}},
+  "89": {"class_type": "VAEDecode", "inputs": {"samples": ["88", 0], "vae": ["3", 0]}, "_meta": {"title": "Quick decode"}},
+  "90": {"class_type": "ImageScale", "inputs": {"image": ["89", 0], "upscale_method": "lanczos", "width": ["14", 0], "height": ["14", 1], "crop": "disabled"}, "_meta": {"title": "Quick at working size"}},
+  "91": {"class_type": "ImageCompositeMasked", "inputs": {"destination": ["13", 0], "source": ["90", 0], "x": 0, "y": 0, "resize_source": false, "mask": ["33", 0]}, "_meta": {"title": "NUKE_START_IMAGE"}},
+
+  "32": {"class_type": "ReferenceMultiLatent", "inputs": {"positive": ["30", 0], "negative": ["31", 0], "vae": ["3", 0], "resolution": "keep resolution", "images.image0": ["22", 0]}, "_meta": {"title": "NUKE_REFS"}},
+  "33": {"class_type": "GrowMask", "inputs": {"mask": ["17", 0], "expand": 16, "tapered_corners": true}, "_meta": {"title": "NUKE_GROW"}},
+  "34": {"class_type": "VAEEncode", "inputs": {"pixels": ["91", 0], "vae": ["3", 0]}, "_meta": {"title": "Refine start"}},
+  "35": {"class_type": "SetLatentNoiseMask", "inputs": {"samples": ["34", 0], "mask": ["33", 0]}, "_meta": {"title": "Set Latent Noise Mask"}},
+  "36": {"class_type": "KSampler", "inputs": {"model": ["1", 0], "seed": 7, "steps": 8, "cfg": 1.0, "sampler_name": "euler", "scheduler": "simple", "positive": ["32", 0], "negative": ["32", 1], "latent_image": ["35", 0], "denoise": 0.35}, "_meta": {"title": "NUKE_SAMPLER"}},
+  "37": {"class_type": "VAEDecode", "inputs": {"samples": ["36", 0], "vae": ["3", 0]}, "_meta": {"title": "VAE Decode"}},
+  "38": {"class_type": "PaintAPlate_LevelFill", "inputs": {"image": ["37", 0], "alpha": ["33", 0], "base": ["13", 0], "paint": ["17", 0], "enabled": false}, "_meta": {"title": "NUKE_LEVEL"}},
+
+  "40": {"class_type": "SeedVR2LoadDiTModel", "inputs": {"model": "seedvr2_ema_3b-Q4_K_M.gguf", "device": "cuda:0", "offload_device": "cpu", "cache_model": false}, "_meta": {"title": "NUKE_SEEDVR_DIT"}},
+  "41": {"class_type": "SeedVR2LoadVAEModel", "inputs": {"model": "ema_vae_fp16.safetensors", "device": "cuda:0", "encode_tiled": true, "decode_tiled": true, "offload_device": "cpu", "cache_model": false}, "_meta": {"title": "SeedVR2 VAE"}},
+  "42": {"class_type": "SeedVR2VideoUpscaler", "inputs": {"image": ["38", 0], "dit": ["40", 0], "vae": ["41", 0], "seed": 42, "resolution": 1080, "max_resolution": 0, "batch_size": 1, "uniform_batch_size": false, "color_correction": "lab", "offload_device": "cpu"}, "_meta": {"title": "NUKE_SEEDVR"}},
+
+  "45": {"class_type": "ImageColorSpace", "inputs": {"image": ["42", 0], "source": "sRGB", "destination": "linear"}, "_meta": {"title": "NUKE_TO_LINEAR"}},
+  "46": {"class_type": "PlateFit_FitToPlate", "inputs": {"plate": ["10", 0], "image": ["45", 0], "mask": ["10", 1], "align": true, "max_shift": 8.0, "match_color": true, "grain": 1.0, "grow": 8, "feather": 12, "steady": 2}, "_meta": {"title": "NUKE_FIT"}},
+  "47": {"class_type": "Save EXR (ACEScg)", "inputs": {"images": ["46", 0], "alpha": ["46", 1], "filename_prefix": "NukeComfy/Flux3Klein", "color_space": "Convert Linear sRGB to ACEScg", "precision": "16-bit half", "compression": "zip"}, "_meta": {"title": "NUKE_OUTPUT"}}
+}
