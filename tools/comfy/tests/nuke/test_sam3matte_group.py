@@ -401,6 +401,58 @@ def main():
     check("crypto_matches_reference", all(r[1] and not r[2] and not r[3] for r in (r_a, r_b, r_c, r_d)),
           "8 pixels each in 4 overlap cases; 8-slot expression length %d chars accepted" % max(r_c[0], r_d[0]))
 
+    # ---------------------------------------------------------- mask_scale_up (masks at tracking size, Source bbox != format)
+    HALF = SCRATCH + "/v_half"
+    os.makedirs(HALF, exist_ok=True)
+    if not os.path.exists("%s/obj0.%04d.png" % (HALF, FK)):
+        nuke.scriptClear()
+        nuke.root()["format"].setValue(nuke.addFormat("%d %d 1 sam2k" % (W, H)))
+        r = nuke.nodes.Read(file=VER + "/obj0.####.png", first=F0, last=F1, origfirst=F0, origlast=F1, raw=True)
+        rf = nuke.nodes.Reformat(inputs=[r], type="to format", resize="distort")
+        rf["format"].setValue(nuke.addFormat("%d %d 1 sam_half" % (W // 2, H // 2)))
+        w = nuke.nodes.Write(inputs=[rf], file=HALF + "/obj0.####.png", file_type="png", raw=True, channels="rgb")
+        w["datatype"].setValue("8 bit")
+        nuke.execute(w, FK - 1, FK + 1)
+    g, plate = fresh()
+    r0 = nuke.nodes.Read(file=VER + "/obj0.####.png", first=F0, last=F1, origfirst=F0, origlast=F1, raw=True)
+    A, A2, B, BG = find_pixels(r0, nuke.nodes.Read(file=VER + "/obj1.####.png", first=F0, last=F1, origfirst=F0, origlast=F1, raw=True))
+    ex, ey = edge_point(r0, A[0], A[1])
+    cropn = nuke.nodes.Crop(inputs=[plate], reformat=False)
+    cropn["box"].setValue([300, 200, 1700, 900])      # bbox 1400x700 inside a 2048x1080 format
+    g.setInput(0, cropn)
+    g["obj_present0"].setValue(True)
+    rd = nuke.toNode("SAM3Matte.Obj0Read")
+    rd["file"].setValue(HALF + "/obj0.####.png")
+    for kn, v in (("first", FK - 1), ("last", FK + 1), ("origfirst", FK - 1), ("origlast", FK + 1)):
+        rd[kn].setValue(v)
+    half_fmt = (rd.width(), rd.height())
+    sc = nuke.toNode("SAM3Matte.Obj0Scale")
+    S(g, "sam.m0", 0, 0)   # warm-up
+    gf = g.format()
+    src_bbox = (cropn.bbox().w(), cropn.bbox().h())
+    sc_fmt = (sc.format().width(), sc.format().height())
+    sc_bbox = (sc.bbox().w(), sc.bbox().h())
+    inter = union_n = 0
+    for y in range(10, H, 20):
+        for x in range(10, W, 20):
+            a_ = S(g, "sam.m0", x + 0.5, y + 0.5) > 0.5
+            b_ = S(r0, "red", x + 0.5, y + 0.5) > 0.5
+            inter += a_ and b_
+            union_n += a_ or b_
+    iou = inter / float(union_n) if union_n else 0.0
+    edge = [(S(g, "sam.m0", ex + dx + 0.5, ey + 0.5), S(r0, "red", ex + dx + 0.5, ey + 0.5)) for dx in range(-4, 5)]
+    edge_dev = max(abs(a_ - b_) for a_, b_ in edge)
+    inside = S(g, "sam.m0", A[0] + 0.5, A[1] + 0.5)
+    outside = S(g, "sam.m0", BG[0] + 0.5, BG[1] + 0.5)
+    alpha_in = S(g, "rgba.alpha", A[0] + 0.5, A[1] + 0.5)
+    check("mask_scale_up",
+          half_fmt == (W // 2, H // 2) and sc_fmt == (W, H) and sc_bbox == (W, H) and (gf.width(), gf.height()) == (W, H)
+          and src_bbox[0] < 1500 and src_bbox[1] < 800 and union_n > 50 and iou >= 0.97 and inside > 0.99 and outside == 0 and alpha_in > 0.99
+          and edge_dev < 0.3,
+          "Read %s -> Obj0Scale format %s bbox %s; Group format %dx%d; Source bbox %s (format stays %dx%d); "
+          "IoU vs full-size obj0 on a 20 px grid = %.4f (%d px union); inside %.3f outside %.3f alpha %.3f; max edge deviation %.3f" % (
+              half_fmt, sc_fmt, sc_bbox, gf.width(), gf.height(), src_bbox, W, H, iou, union_n, inside, outside, alpha_in, edge_dev))
+
     print("\n%s" % ("ALL PASS" if not failed else "FAILED: " + ", ".join(failed)))
     sys.exit(1 if failed else 0)
 
