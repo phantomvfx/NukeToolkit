@@ -3,6 +3,7 @@ SAM3Matte live graph checks (Task 8). Needs ComfyUI running (COMFY_URL, default 
 sam3.1_multiplex_fp16 checkpoint, and the spike plate/masks. Not a pytest file: run it as a script.
 
     python tools/comfy/tests/live/check_sam3matte_graph.py [check_name ...]
+    python tools/comfy/tests/live/check_sam3matte_graph.py --selftest   (offline: the 1536 px comparison helper)
 
 It proves the risky parts of the ComfyUI side that sam3matte_graph.py assumes, against the real server, and prints a
 results table. The three settings constants in sam3matte_graph.py (UPLOAD_NESTED, WHOLE_RANGE_SEED_WITH_TEXT,
@@ -224,6 +225,50 @@ def read(path, width=0):
     return png.read_mask(path, width)
 
 
+def resample(m, nw, nh):
+    """Nearest-neighbour resample of an (w, h, data) 8-bit mask to nw x nh (stdlib only)."""
+    w, h, data = m
+    if (w, h) == (nw, nh):
+        return m
+    cols = [min(w - 1, (x * w) // nw) for x in range(nw)]
+    out = []
+    last_y, last_row = None, None
+    for y in range(nh):
+        sy = min(h - 1, (y * h) // nh)
+        if sy != last_y:
+            row = data[sy * w:(sy + 1) * w]
+            last_row = bytes(row[c] for c in cols)
+            last_y = sy
+        out.append(last_row)
+    return nw, nh, b"".join(out)
+
+
+def common_iou(a, b):
+    """IoU of two (w, h, data) masks of possibly different sizes: the smaller one is brought up to the larger
+    (nearest) so a 2048-wide spike mask and a 1536-wide result are compared at 2048, never raising on size."""
+    if a[0] * a[1] < b[0] * b[1]:
+        a = resample(a, b[0], b[1])
+    else:
+        b = resample(b, a[0], a[1])
+    return ch.mask_iou(a[2], b[2])
+
+
+def selftest():
+    """Offline (no GPU, no server): the 1536 comparison path on a spike mask vs itself resampled to 1536x810."""
+    ok = True
+    for i in (0, 60, 119, 180):
+        full = read(spike_obj0(i))  # 2048x1080, as the spike wrote it
+        small = resample(full, 1536, 810)
+        v = common_iou(full, small)
+        same = common_iou(full, full)
+        good = full[0] == 2048 and small[:2] == (1536, 810) and (not nonempty(full[2]) or (same == 1.0 and v >= 0.97))
+        ok = ok and good
+        log("selftest frame %d: %dx%d vs %dx%d non-empty=%s IoU(full, 1536 resample)=%.4f IoU(full, full)=%.4f %s" % (
+            i + FIRST, full[0], full[1], small[0], small[1], nonempty(full[2]), v, same, "ok" if good else "BAD"))
+    log("selftest " + ("PASS" if ok else "FAIL"))
+    return 0 if ok else 1
+
+
 # ------------------------------------------------------------------ checks
 # every check returns (True|False, measurement string) and may flip the g.<CONSTANT> fallbacks in memory
 
@@ -416,8 +461,9 @@ def check_tracking_width_fidelity():
             upload(frame_png(f, dest), sub)
         res2, per2 = track("fidelity1536", sub, text="person", n_save=1, max_objects=8, tw=w15, th=h15)
         if res2["ok"]:
-            pairs2 = [(read(spike_obj0(i), 1536)[2], read(per2[0][i])[2]) for i in range(len(per2[0]))]
-            m2, mn2, c2 = iou_stats(pairs2)
+            vals = [(read(spike_obj0(i)), read(per2[0][i])) for i in range(len(per2[0]))]  # 2048 wide vs 1536 wide
+            ious2 = [common_iou(a, b) for a, b in vals if nonempty(a[2]) or nonempty(b[2])]
+            m2, mn2, c2 = (sum(ious2) / len(ious2), min(ious2), len(ious2)) if ious2 else (None, None, 0)
             msg += "; at %dx%d: mean IoU %.4f (min %.4f, %d frames)" % (w15, h15, m2 or 0, mn2 or 0, c2)
         else:
             msg += "; 1536 run failed: %s" % str(res2["error"])[:200]
@@ -456,6 +502,8 @@ CHECKS = [check_vhs_nested_dir, check_detect_text_plus_points, check_detect_noth
 
 
 def main(argv):
+    if "--selftest" in argv:
+        return selftest()
     code, stats = http_json("/system_stats")
     if code != 200:
         log("ComfyUI not reachable at %s" % URL)
