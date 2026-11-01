@@ -140,7 +140,10 @@ def show_version(node, index):
         return
     index = max(0, min(index, len(versions) - 1))
     v = versions[index]
-    node.node("Result")["file"].setValue(v["file"])
+    read = node.node("Result")
+    read["file"].setValue(v["file"])
+    # without a reload the Read can keep showing black (on_error) from before the file was there: v2 came up black (31 Oct)
+    read["reload"].execute()
     node["patch_x"].setValue(v["x"])
     node["patch_y"].setValue(v["y"])
     node["patch_frame"].setValue(v["frame"])  # the comp mask is held at the frame the patch was made from
