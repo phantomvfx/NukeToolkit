@@ -133,20 +133,44 @@ class ComfyClient:
         except (urllib.error.URLError, OSError, ValueError, KeyError) as e:
             raise JobError("Could not queue the graph on ComfyUI at %s: %s" % (self.base_url, getattr(e, "reason", e)))
 
-    def interrupt(self):
-        req = urllib.request.Request(self.base_url + "/interrupt", data=b"{}",
+    def _post_json(self, path, body):
+        req = urllib.request.Request(self.base_url + path, data=json.dumps(body).encode("utf-8"),
                                      headers={"Content-Type": "application/json"})
+        urllib.request.urlopen(req, timeout=10).close()
+
+    def queue_state(self, prompt_id):
+        """'running', 'pending' or None (in neither list) from GET /queue. Raises JobError if the server can't say."""
+        q = self._get_json("/queue")
+
+        def has(items):
+            for it in items or []:
+                pid = it.get("prompt_id") if isinstance(it, dict) else (it[1] if len(it) > 1 else None)
+                if pid == prompt_id:
+                    return True
+            return False
+
+        if has(q.get("queue_running")):
+            return "running"
+        if has(q.get("queue_pending")):
+            return "pending"
+        return None
+
+    def cancel_prompt(self, prompt_id):
+        """Stop our prompt without touching anyone else's job on a shared server: dequeue it if it is waiting,
+        interrupt only when it is the one running (targeted by prompt_id; never a global interrupt)."""
         try:
-            urllib.request.urlopen(req, timeout=10).close()
-        except (urllib.error.URLError, OSError):
+            self._post_json("/queue", {"delete": [prompt_id]})
+            if self.queue_state(prompt_id) == "running":
+                self._post_json("/interrupt", {"prompt_id": prompt_id})
+        except (urllib.error.URLError, OSError, JobError):
             pass
 
     def wait(self, prompt_id, cancel, poll_s=2.0):
         """Poll /history/<id> until the prompt is done. Returns the entry's outputs."""
-        failures = 0
+        failures = empties = 0
         while True:
             if cancel.is_set():
-                self.interrupt()
+                self.cancel_prompt(prompt_id)
                 raise JobCancelled()
             entry = None
             try:
@@ -158,7 +182,20 @@ class ComfyClient:
                     raise
             if entry is not None:
                 return self._outputs(entry)
+            empties += 1
+            if empties >= 3 and empties % 3 == 0 and self._lost(prompt_id):
+                raise JobError("ComfyUI lost the job (restarted or queue cleared)")
             cancel.wait(poll_s)
+
+    def _lost(self, prompt_id):
+        """True when the prompt is in neither queue list and still has no history (checked again after the queue
+        lookup, so a job that finished in between is not reported lost)."""
+        try:
+            if self.queue_state(prompt_id) is not None:
+                return False
+            return self._get_json("/history/" + urllib.parse.quote(prompt_id)).get(prompt_id) is None
+        except JobError:
+            return False
 
     @staticmethod
     def _outputs(entry):
@@ -197,17 +234,29 @@ def _rmtree(path):
 
 class _Run:
     def __init__(self, job, report, cancel, client, resume, poll_s):
+        # nothing here may raise: bad job dicts are reported by setup() inside run_job's try block
         self.job, self.cancel, self.client, self.poll_s = job, cancel, client, poll_s
         self._report = report
+        self.resume = resume
+        self.resumed = False
+        self.V = job.get("folder", "") if isinstance(job, dict) else ""
+        self.scratch = ""
+        self.names, self.next_free, self.completed, self.dropped = {}, 0, [], 0
+        self.notes = []
+        self.detect_paths = {}          # slot -> full-size Detect mask (fresh key-mode run only)
+        self.plan = []
+        self.auto_names = []
+
+    def setup(self):
+        job, resume = self.job, self.resume
         self.resumed = bool(resume and resume.get("completed_chunks"))
         self.V = resume["folder"] if self.resumed else job["folder"]
         self.scratch = os.path.join(job["frames_dir"], "_work")
-        self.names = dict(resume.get("names", {})) if self.resumed else {}
-        self.next_free = int(resume.get("next_free", 0)) if self.resumed else 0
-        self.completed = list(resume["completed_chunks"]) if self.resumed else []
-        self.dropped = int(resume.get("dropped", 0)) if self.resumed else 0
-        self.notes = []
-        self.detect_paths = {}          # slot -> full-size Detect mask (fresh key-mode run only)
+        if self.resumed:
+            self.names = dict(resume.get("names", {}))
+            self.next_free = int(resume.get("next_free", 0))
+            self.completed = list(resume["completed_chunks"])
+            self.dropped = int(resume.get("dropped", 0))
         self.plan = chunks.plan_chunks(job["first"], job["last"], job["key"] if job["mode"] == "key" else None,
                                        job["chunk_size"])
         self.auto_names = versions.object_names(job["text"], ["text"] * MAX_SLOTS)
@@ -427,6 +476,7 @@ class _Run:
 
     # -- the whole job
     def execute(self):
+        self.setup()
         if self.job["mode"] == "key" and not self.resumed:
             self.detect_stage()
         for chunk in self.plan:
@@ -435,9 +485,9 @@ class _Run:
             self.run_chunk(chunk)
 
     def finish(self, error, cancelled):
-        job = self.job
+        job = self.job if isinstance(self.job, dict) else {}
         spans = {}
-        if os.path.isdir(self.V):
+        if self.V and os.path.isdir(self.V) and self.plan:
             for fname in sorted(os.listdir(self.V)):
                 m = _MASK_FILE.match(fname)
                 if not m:
@@ -466,31 +516,34 @@ class _Run:
             message += " %d object%s over the limit dropped." % (self.dropped, "" if self.dropped == 1 else "s")
         if self.notes:
             message += " " + "; ".join(self.notes) + "."
-        return {"folder": self.V, "first": job["first"], "last": job["last"],
-                "key": job["key"] if job["mode"] == "key" else None, "mode": job["mode"], "text": job["text"],
-                "width": job["track_w"], "height": job["track_h"], "objects": objects, "names": names,
+        return {"folder": self.V, "first": job.get("first"), "last": job.get("last"),
+                "key": job.get("key") if job.get("mode") == "key" else None, "mode": job.get("mode"),
+                "text": job.get("text", ""), "width": job.get("track_w"), "height": job.get("track_h"), "objects": objects, "names": names,
                 "next_free": self.next_free, "completed_chunks": done, "n_chunks": n_chunks, "partial": partial,
                 "cancelled": cancelled, "error": error, "dropped": self.dropped,
-                "hints": {"select": bool(job["positive"]), "stencil": job.get("stencil") is not None,
-                          "text": bool(job["text"])},
+                "hints": {"select": bool(job.get("positive")), "stencil": job.get("stencil") is not None,
+                          "text": bool(job.get("text"))},
                 "message": message}
 
     def cleanup(self):
-        _rmtree(self.scratch)
-        _rmtree(os.path.join(self.V, "_plate"))
-        _rmtree(os.path.join(self.job["folder"], "_plate"))
-        if os.path.basename(self.job["frames_dir"].rstrip("/\\")) == "_plate":
-            _rmtree(self.job["frames_dir"])
+        job = self.job if isinstance(self.job, dict) else {}
+        for path in (self.scratch, os.path.join(self.V, "_plate") if self.V else "",
+                     os.path.join(job["folder"], "_plate") if job.get("folder") else ""):
+            if path:
+                _rmtree(path)
+        frames_dir = job.get("frames_dir") or ""
+        if frames_dir and os.path.basename(frames_dir.rstrip("/\\")) == "_plate":
+            _rmtree(frames_dir)
 
 
 def run_job(job, report, cancel, client=None, resume=None, poll_s=2.0):
     """Run one SAM3Matte Generate. Returns the C3 result dict (see module doc); raises only NothingFound."""
-    if client is None:
-        client = ComfyClient(api.ComfyAPIClient().base_url)
     run = _Run(job, report, cancel, client, resume, poll_s)
     error, cancelled = None, False
     try:
         try:
+            if client is None:
+                run.client = ComfyClient(api.ComfyAPIClient().base_url)
             run.execute()
         except NothingFound:
             raise
@@ -498,11 +551,13 @@ def run_job(job, report, cancel, client=None, resume=None, poll_s=2.0):
             cancelled = True
         except JobError as e:
             error = str(e)
-        except Exception as e:  # a bug or a bad file must not kill the worker thread silently
+        except Exception as e:  # a bug, a bad job dict or a bad file must not kill the worker thread
             error = "%s: %s" % (type(e).__name__, e)
         result = run.finish(error, cancelled)
-        if (job["mode"] == "range" and not error and not cancelled and not result["objects"]
+        if (result["mode"] == "range" and not error and not cancelled and not result["objects"]
                 and not run.resumed):
+            # measured live (T9 probe): a text that matches nothing is NOT an error, SAM3_VideoTrack returns
+            # all-black images for every slot
             raise NothingFound("SAM3 found no object for this prompt in the range.")
         return result
     finally:

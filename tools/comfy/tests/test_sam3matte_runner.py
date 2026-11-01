@@ -544,11 +544,20 @@ def test_server_down_in_chunk0(tmp_path):
 def test_cancel_during_chunk_interrupts(tmp_path, fakes):
     cancel = threading.Event()
     job = make_job(tmp_path)
-    fake = fakes(SceneResponder(key_scene(), detect_objs=[0, 1], on_prompt=lambda wf, n: cancel.set() if n == 2 else None))
+    resp = SceneResponder(key_scene(), detect_objs=[0, 1])
+
+    def hook(wf, n):
+        if n == 2:                                   # chunk 1 is queued and running when the artist cancels
+            resp.fake.hold = "running"
+            cancel.set()
+
+    resp.on_prompt = hook
+    fake = fakes(resp)
     res, _ = run(job, fake, cancel=cancel)
     assert res["cancelled"] is True and res["partial"] is True and res["error"] is None
     assert res["completed_chunks"] == [0]
-    assert fake.interrupts
+    assert fake.deleted == ["fake-0002"]
+    assert fake.interrupt_bodies == [{"prompt_id": "fake-0002"}]     # targeted, never a global interrupt
 
 
 def test_cancel_between_chunks_stops_before_queueing(tmp_path, fakes):
@@ -600,6 +609,41 @@ def test_resume_skips_completed_chunks(tmp_path, fakes):
             assert read_file(job, k, f) == scene.png(k, f), (k, f)
     assert [(o["index"], o["first"], o["last"]) for o in res2["objects"]] == [(0, 1001, 1010), (1, 1001, 1010)]
     assert not any("Detecting" in m for m in msgs)
+
+
+def test_range_mode_text_matching_nothing_is_nothing_found(tmp_path, fakes):
+    # measured live: a prompt that matches nothing is a success with all-black images, not an execution_error
+    job = range_job(tmp_path, text="giraffe")
+    fake = fakes(SceneResponder(Scene(1001, {})))
+    with pytest.raises(r.NothingFound):
+        run(job, fake)
+    assert len(fake.prompts) == 3                       # every chunk ran, all black
+    assert mask_files(job) == []
+    assert not os.path.exists(job["folder"] + "/_plate")
+
+
+@pytest.mark.parametrize("bad", [
+    {},                                                                  # missing keys
+    {"chunk_size": 1},                                                   # plan_chunks rejects it
+    {"first": 1010, "last": 1001},                                       # first after last
+    {"key": 3000},                                                       # key outside the range
+])
+def test_run_job_never_raises_on_a_bad_job(tmp_path, bad):
+    if bad == {}:
+        job = {}
+    else:
+        job = make_job(tmp_path)
+        job.update(bad)
+    res = r.run_job(job, lambda m: None, threading.Event(), client=r.ComfyClient("http://127.0.0.1:9"), poll_s=0.01)
+    assert res["error"] and res["completed_chunks"] == [] and res["partial"] is False and res["objects"] == []
+    assert set(res) >= {"folder", "objects", "names", "error", "hints", "message"}
+
+
+def test_run_job_bad_resume_is_an_error_result(tmp_path):
+    job = make_job(tmp_path)
+    res = r.run_job(job, lambda m: None, threading.Event(), client=r.ComfyClient("http://127.0.0.1:9"),
+                    resume={"completed_chunks": [0]}, poll_s=0.01)      # no "folder"
+    assert res["error"]
 
 
 def test_plate_scratch_removed(tmp_path, fakes):
@@ -667,16 +711,62 @@ def test_client_wait_execution_error_message(fakes):
     assert str(e.value) == "Error in SAM3_VideoTrack: out of memory"
 
 
-def test_client_wait_cancel_interrupts(fakes):
+def test_client_wait_cancel_interrupts_only_our_running_prompt(fakes):
     fake = fakes(lambda wf, n: {})
-    fake.pending_polls = 10 ** 6
+    fake.hold = "running"
     client = r.ComfyClient(fake.url)
     pid = client.queue({"1": {"class_type": "X", "inputs": {}}})
     cancel = threading.Event()
     threading.Timer(0.1, cancel.set).start()
     with pytest.raises(r.JobCancelled):
         client.wait(pid, cancel, poll_s=0.01)
-    assert fake.interrupts
+    assert fake.deleted == [pid]
+    assert fake.interrupt_bodies == [{"prompt_id": pid}]
+
+
+def test_client_cancel_of_queued_prompt_dequeues_and_never_interrupts(fakes):
+    fake = fakes(lambda wf, n: {})
+    fake.hold = "pending"
+    fake.foreign_running = ["someone-elses-job"]       # a shared server busy with another client's job
+    client = r.ComfyClient(fake.url)
+    pid = client.queue({"1": {"class_type": "X", "inputs": {}}})
+    assert client.queue_state(pid) == "pending"
+    cancel = threading.Event()
+    cancel.set()
+    with pytest.raises(r.JobCancelled):
+        client.wait(pid, cancel, poll_s=0.01)
+    assert fake.deleted == [pid]
+    assert pid not in fake.queue_pending
+    assert fake.interrupts == [] and fake.interrupt_bodies == []     # the other job was not touched
+
+
+def test_client_wait_reports_a_lost_job(fakes):
+    fake = fakes(lambda wf, n: {})
+    fake.hold = "lost"                                  # accepted, then the server restarted: in no queue, no history
+    client = r.ComfyClient(fake.url)
+    pid = client.queue({"1": {"class_type": "X", "inputs": {}}})
+    with pytest.raises(r.JobError) as e:
+        client.wait(pid, threading.Event(), poll_s=0.01)
+    assert "lost the job" in str(e.value)
+
+
+def test_client_wait_keeps_waiting_while_the_job_is_queued(fakes):
+    fake = fakes(lambda wf, n: {"save0": [fc.rgb_png_bytes(2, 2, bytes(4))]})
+    fake.hold = "pending"
+    fake.foreign_running = ["someone-elses-job"]
+    client = r.ComfyClient(fake.url)
+    pid = client.queue({"save0": {"class_type": "SaveImage", "inputs": {"filename_prefix": "NukeComfy/j/c0/obj0"}}})
+    threading.Timer(0.3, fake.release).start()          # many polls (and queue checks) happen before this
+    outputs = client.wait(pid, threading.Event(), poll_s=0.01)
+    assert len(outputs["save0"]["images"]) == 1
+
+
+def test_run_job_lost_job_is_an_error_result(tmp_path, fakes):
+    job = make_job(tmp_path)
+    resp = SceneResponder(key_scene(), detect_objs=[0, 1], on_prompt=lambda wf, n: setattr(resp.fake, "hold", "lost") if n == 1 else None)
+    fake = fakes(resp)
+    res, _ = run(job, fake)
+    assert "lost the job" in res["error"] and res["completed_chunks"] == []
 
 
 def test_client_upload_failure_raises_joberror(tmp_path):

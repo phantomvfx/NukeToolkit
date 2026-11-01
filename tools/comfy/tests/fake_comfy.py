@@ -14,6 +14,10 @@ It can also be a plain dict or None (every prompt then fails with a FakeError).
 Records (for assertions): uploads [(subfolder, name)], upload_data {(subfolder, name): bytes},
 prompts [workflow] (prompt_no is the index into this list), interrupts [prompt_no | None].
 pending_polls: how many /history/<id> polls answer "not done yet" before the entry shows up.
+Queue model (GET /queue, POST /queue {"delete"|"clear"}): `hold` = None | "running" | "pending" | "lost" makes new prompts
+stay unfinished (no history) and show up in queue_running / queue_pending / neither (a restarted server) until
+`release()`; `foreign_running` lists other clients' prompt ids that are always in queue_running. Records `deleted`
+(ids sent to POST /queue delete) and `interrupt_bodies` (the JSON body of every POST /interrupt).
 
 Routes: POST /upload/image, POST /prompt, GET /history/<id>, GET /view, POST /interrupt, GET /system_stats.
 Same wire shapes as ComfyUI: /upload/image -> {"name","subfolder","type"}; history entry
@@ -135,6 +139,13 @@ class FakeComfy:
         self.upload_data = {}
         self.prompts = []
         self.interrupts = []
+        self.interrupt_bodies = []
+        self.deleted = []
+        self.hold = None
+        self.foreign_running = []
+        self.held = {}        # prompt id -> finished history entry, shown by release()
+        self.queue_running = []
+        self.queue_pending = []
         self.history = {}
         self._files = {}      # (filename, subfolder, type) -> bytes
         self._counters = {}   # filename prefix -> next number
@@ -177,6 +188,8 @@ class FakeComfy:
                     if data is None:
                         return self._send(404, {"error": "no such file"})
                     return self._send(200, data, "image/png")
+                if u.path == "/queue":
+                    return self._send(200, fake._queue())
                 if u.path == "/system_stats":
                     return self._send(200, {"system": {"comfyui_version": "fake"}, "devices": []})
                 return self._send(404, {"error": "unknown route " + u.path})
@@ -189,8 +202,24 @@ class FakeComfy:
                 if u.path == "/prompt":
                     return self._send(*fake._prompt(body))
                 if u.path == "/interrupt":
+                    try:
+                        sent = json.loads(body.decode("utf-8") or "{}")
+                    except ValueError:
+                        sent = {}
                     with fake._lock:
                         fake.interrupts.append(len(fake.prompts) - 1 if fake.prompts else None)
+                        fake.interrupt_bodies.append(sent)
+                    return self._send(200, {})
+                if u.path == "/queue":
+                    sent = json.loads(body.decode("utf-8") or "{}")
+                    with fake._lock:
+                        if sent.get("clear"):
+                            fake.queue_pending, fake.held = [], {}
+                        for pid in sent.get("delete", []):
+                            fake.deleted.append(pid)
+                            if pid in fake.queue_pending:
+                                fake.queue_pending.remove(pid)
+                                fake.held.pop(pid, None)
                     return self._send(200, {})
                 return self._send(404, {"error": "unknown route " + u.path})
 
@@ -263,8 +292,15 @@ class FakeComfy:
                     ["execution_error", {"prompt_id": pid, "node_id": e.node_id or "1", "node_type": e.node_type,
                                          "exception_message": e.message, "exception_type": e.exception_type}]]},
                     "outputs": {}}
-            self.history[pid] = entry
             self._polls[pid] = 0
+            if self.hold:
+                self.held[pid] = entry
+                if self.hold == "running":
+                    self.queue_running.append(pid)
+                elif self.hold == "pending":
+                    self.queue_pending.append(pid)
+            else:
+                self.history[pid] = entry
         return 200, {"prompt_id": pid, "number": prompt_no, "node_errors": {}}
 
     def _success(self, workflow, made):
@@ -282,6 +318,21 @@ class FakeComfy:
             outputs[node_id] = {"images": images}
         return {"status": {"status_str": "success", "completed": True,
                            "messages": [["execution_success", {}]]}, "outputs": outputs}
+
+    def release(self):
+        """Finish every held prompt: it leaves the queue and its history entry appears."""
+        with self._lock:
+            self.history.update(self.held)
+            self.held = {}
+            self.queue_running, self.queue_pending = [], []
+
+    def _queue(self):
+        with self._lock:
+            def item(i, pid):
+                return [i, pid, {}, {}, []]
+            running = list(self.foreign_running) + list(self.queue_running)
+            return {"queue_running": [item(i, p) for i, p in enumerate(running)],
+                    "queue_pending": [item(i, p) for i, p in enumerate(self.queue_pending)]}
 
     def _history(self, pid):
         with self._lock:
