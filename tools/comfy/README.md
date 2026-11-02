@@ -87,7 +87,8 @@ pure helpers (`sam3matte_chunks`, `_crypto`, `_hints`, `_png`, `_versions`, `_ro
 - **Generate** renders the plate as 8-bit PNGs through the script's default display and view (what you see in the
   Viewer, not a clipped linear encode), uploads them to ComfyUI (`/upload/image`, so any `COMFY_URL` works, no shared
   disk), runs SAM3 and downloads one mask sequence per object. Every Generate is a new entry in *Version*. **Cancel**
-  stops after the current chunk.
+  interrupts the running chunk within a couple of seconds and keeps the chunks already finished as a partial
+  version; Generate with the same settings resumes it.
 - **Outputs** (one stream): RGB is Source, untouched. `rgba.alpha` is the union of the chosen *Objects* (all, a
   comma list of slot numbers, or object names), then *Erode*, *Blur* and, if *Hard stencil* is on, the Stencil cut out.
   `sam.m0` to `sam.m7` are one raw mask per object (8 channels in one layer). `CryptoSAM00` plus the manifest metadata
