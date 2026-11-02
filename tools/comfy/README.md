@@ -124,9 +124,11 @@ ComfyUI needs: core SAM3 nodes (ComfyUI v0.43 or later), the model `sam3.1_multi
 Tested (Nuke 16.1, ComfyUI at `127.0.0.1:8188`): the pure tests, including the runner against a fake ComfyUI server;
 the Group, the Nuke layer (Generate against a stub runner) and Make Roto in headless Nuke 16.1; the two ComfyUI graphs
 against the real server and the real model, on the 200-frame 2K test plate (`tests/live/check_sam3matte_graph.py`). A
-Cryptomatte node reading the layer was checked headless. **Not run**: the Nuke GUI (the Generate, Cancel and Make
-Roto buttons, the Cryptomatte click-picker in the Viewer), and a full Generate from Nuke against a real ComfyUI
-(live acceptance pending).
+Cryptomatte node reading the layer was checked headless. Full Generates from headless Nuke against the real ComfyUI
+on that plate (2026-11-02): key frame from a Select (IoU 0.995 against the spike), Whole range "person" (0.994), and
+chunks of 60 (0.999 against the unchunked run). In the Nuke 16.1 GUI (2026-11-02): Generate in key-frame mode, the
+Cryptomatte click-picker and Make Roto worked. **Not run yet**: Cancel and resume in the GUI, save and reopen, a
+500+ frame shot, a 4K plate.
 
 ## QwenInpaint (object removal / replacement)
 

@@ -102,8 +102,9 @@ behaviour. NukeComfy depends on:
   Build the `.nk` first with `build/build_sam3matte.py`. Each prints PASS/FAIL and exits 1 on a failure.
 - Live ComfyUI: `python tools/comfy/tests/live/check_sam3matte_graph.py`. Needs the
   model and the spike plate (paths in its docstring).
-- The Nuke GUI is not covered by any of these: the Generate, Cancel and Make Roto
-  buttons and the Cryptomatte click-picker in the Viewer have not been run.
+- None of these cover the Nuke GUI. Checked by hand in Nuke 16.1 on 2026-11-02:
+  Generate (key-frame mode), the Cryptomatte click-picker and Make Roto. Not yet:
+  Cancel and resume in the GUI, save and reopen.
 - The other tools (Flux3Klein, DepthAny, ...) have no automated tests. Verify them
   against a running ComfyUI: the `comfy-mcp` MCP tools can check the server
   (`server_info`) and run a workflow JSON directly.
