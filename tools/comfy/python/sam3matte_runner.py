@@ -484,22 +484,47 @@ class _Run:
                 continue
             self.run_chunk(chunk)
 
+    def scan_masks(self, spans):
+        """Fill spans {slot: (first, last)} from the non-blank obj files in V and delete the files of empty slots.
+        A file that cannot be read (corrupt leftover) counts as non-blank and is mentioned in the message; a file
+        that cannot be deleted is left and mentioned. Only listing the folder can raise."""
+        if not (self.V and os.path.isdir(self.V) and self.plan):
+            return
+        bad = []
+        for fname in sorted(os.listdir(self.V)):
+            m = _MASK_FILE.match(fname)
+            if not m:
+                continue
+            slot, frame = int(m.group(1)), int(m.group(2))
+            try:
+                blank = png.is_blank(os.path.join(self.V, fname))
+            except Exception:
+                blank = False
+                bad.append(fname)
+            if not blank:
+                lo, hi = spans.get(slot, (frame, frame))
+                spans[slot] = (min(lo, frame), max(hi, frame))
+        stuck = []
+        for fname in os.listdir(self.V):
+            m = _MASK_FILE.match(fname)
+            if m and int(m.group(1)) not in spans:
+                try:
+                    os.remove(os.path.join(self.V, fname))      # a slot that never showed anything
+                except OSError:
+                    stuck.append(fname)
+        if bad:
+            self.notes.append("%d unreadable mask file%s (e.g. %s)" % (len(bad), "" if len(bad) == 1 else "s", bad[0]))
+        if stuck:
+            self.notes.append("could not delete %d empty-slot file%s (e.g. %s)" % (
+                len(stuck), "" if len(stuck) == 1 else "s", stuck[0]))
+
     def finish(self, error, cancelled):
         job = self.job if isinstance(self.job, dict) else {}
         spans = {}
-        if self.V and os.path.isdir(self.V) and self.plan:
-            for fname in sorted(os.listdir(self.V)):
-                m = _MASK_FILE.match(fname)
-                if not m:
-                    continue
-                slot, frame = int(m.group(1)), int(m.group(2))
-                if not png.is_blank(os.path.join(self.V, fname)):
-                    lo, hi = spans.get(slot, (frame, frame))
-                    spans[slot] = (min(lo, frame), max(hi, frame))
-            for fname in os.listdir(self.V):
-                m = _MASK_FILE.match(fname)
-                if m and int(m.group(1)) not in spans:
-                    os.remove(os.path.join(self.V, fname))      # a slot that never showed anything
+        try:
+            self.scan_masks(spans)
+        except Exception as e:     # listing the folder failed: report it, keep what we know
+            self.notes.append("could not scan the masks (%s: %s)" % (type(e).__name__, e))
         names = {str(s): self.names.get(str(s), "obj%d" % s) for s in sorted(spans)}
         objects = [{"index": s, "name": names[str(s)], "first": spans[s][0], "last": spans[s][1]} for s in sorted(spans)]
         n_chunks = len(self.plan)
@@ -553,7 +578,15 @@ def run_job(job, report, cancel, client=None, resume=None, poll_s=2.0):
             error = str(e)
         except Exception as e:  # a bug, a bad job dict or a bad file must not kill the worker thread
             error = "%s: %s" % (type(e).__name__, e)
-        result = run.finish(error, cancelled)
+        try:
+            result = run.finish(error, cancelled)
+        except Exception as e:     # last line of defence: a result with the error, never an exception
+            result = {"folder": run.V, "first": None, "last": None, "key": None, "mode": None, "text": "",
+                      "width": None, "height": None, "objects": [], "names": {}, "next_free": run.next_free,
+                      "completed_chunks": sorted(run.completed), "n_chunks": len(run.plan), "partial": False,
+                      "cancelled": cancelled, "error": error or "%s: %s" % (type(e).__name__, e),
+                      "dropped": run.dropped, "hints": {"select": False, "stencil": False, "text": False},
+                      "message": "Could not build the result: %s" % e}
         if (result["mode"] == "range" and not error and not cancelled and not result["objects"]
                 and not run.resumed):
             # measured live (T9 probe): a text that matches nothing is NOT an error, SAM3_VideoTrack returns

@@ -646,6 +646,50 @@ def test_run_job_bad_resume_is_an_error_result(tmp_path):
     assert res["error"]
 
 
+def test_corrupt_mask_file_in_folder_does_not_escape(tmp_path):
+    job = make_job(tmp_path)
+    with open(job["folder"] + "/obj0.1001.png", "wb") as f:       # a crash leftover
+        f.write(b"not a png")
+    res = r.run_job(job, lambda m: None, threading.Event(), client=r.ComfyClient("http://127.0.0.1:9"), poll_s=0.01)
+    assert res["error"] and res["completed_chunks"] == []
+    assert "unreadable mask file" in res["message"]
+    assert not os.path.exists(job["folder"] + "/_plate")
+
+
+def test_corrupt_leftover_in_a_good_run_is_reported_not_raised(tmp_path, fakes):
+    job = make_job(tmp_path)
+    with open(job["folder"] + "/obj5.1001.png", "wb") as f:
+        f.write(b"not a png")
+    fake = fakes(SceneResponder(key_scene(), detect_objs=[0, 1]))
+    res, _ = run(job, fake)
+    assert res["error"] is None and "unreadable mask file" in res["message"]
+
+
+def test_undeletable_empty_slot_file_does_not_escape(tmp_path, fakes, monkeypatch):
+    job = make_job(tmp_path)
+    fake = fakes(SceneResponder(Scene(1001, {0: (1001, 1010), 1: (1, 0)}), detect_objs=[0, 1]))
+    real_remove = os.remove
+
+    def locked(path):
+        if os.path.basename(path).startswith("obj1."):
+            raise PermissionError("in use")
+        return real_remove(path)
+
+    monkeypatch.setattr(r.os, "remove", locked)
+    res, _ = run(job, fake)
+    assert res["error"] is None and "could not delete" in res["message"]
+
+
+def test_finish_failure_becomes_an_error_result(tmp_path, fakes, monkeypatch):
+    def boom(self, error, cancelled):
+        raise RuntimeError("finish exploded")
+
+    monkeypatch.setattr(r._Run, "finish", boom)
+    job = make_job(tmp_path)
+    res, _ = run(job, fakes(SceneResponder(key_scene(), detect_objs=[0])))
+    assert "finish exploded" in res["error"] and res["objects"] == []
+
+
 def test_plate_scratch_removed(tmp_path, fakes):
     job = make_job(tmp_path)
     fake = fakes(SceneResponder(key_scene(), detect_objs=[0, 1]))
