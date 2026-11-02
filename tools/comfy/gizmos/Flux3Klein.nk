@@ -7,6 +7,7 @@
 # Inputs: Source, Mask (Roto, a keyer...: pick the channel), Strokes (RGBA paint as a guide), Ref1-Ref4.
 # Needs NukeComfy on the plugin path and a ComfyUI (COMFY_URL) with ComfyUI-EXR-ACEScg, ComfyUI-PlateFit,
 # ainvfx-paintaplate and SeedVR2. Without them the group still evaluates and shows the last result.
+# SAM3Matte's alpha plugs into the Mask input (Mask channel = alpha).
 # Target: Nuke 16.1. Import with the NukeComfy menu or nuke.nodePaste(path).
 set cut_paste_input [stack 0]
 version 16.1 v4
