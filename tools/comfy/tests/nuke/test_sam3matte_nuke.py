@@ -229,6 +229,15 @@ def main():
         and ids["ball_1"] not in metab
     check("show_version_updates_crypto", ok1 and ok2, "v0 both names %s; v1 only person_1 %s" % (ok1, ok2))
 
+    # ------------------------------------------------------------ show_version(i) uses version i, not the pulldown's
+    g, _ = fresh()
+    put_versions(g, [version(objects=((0, "person_1"),)), version(objects=((2, "ball_1"), (3, "cup_1")))])
+    g["version"].setValue(0)
+    s.show_version(g, 1)
+    on = [k for k in range(8) if g["obj_on%d" % k].value()]
+    pres = [k for k in range(8) if g["obj_present%d" % k].value()]
+    check("show_version_index_not_pulldown", on == [2, 3] and pres == [2, 3], "obj_on %s present %s" % (on, pres))
+
     # ------------------------------------------------------------ test_missing_folder_status
     g, _ = fresh()
     put_versions(g, [version(folder=SCRATCH + "/does_not_exist")])
@@ -491,6 +500,20 @@ def main():
           "ok1 %s ok2 %s status %r calls %d" % (ok1, ok2, refused, len(calls)))
     check("cancel_sets_event_and_keeps_partial", cancel_set is True and status(g).startswith("Cancelled")
           and len(s._versions(g)) == 1, "cancel set %s status %r" % (cancel_set, status(g)))
+
+    # ------------------------------------------------------------ a failure while adding the version is shown, not swallowed
+    g, _ = fresh()
+    set_behaviour(lambda job, report, cancel, client, resume: result_for(job))
+    real_add = s._add_result
+    def broken(*a, **k):
+        raise KeyError("boom")
+    s._add_result = broken
+    try:
+        ok = run(g)
+    finally:
+        s._add_result = real_add
+    check("add_result_failure_shown", ok is True and status(g).startswith("Error: adding the version failed")
+          and "KeyError" in status(g) and not s._RUNNING, "status %r" % status(g))
 
     # ------------------------------------------------------------ deleted node during the run must not raise in the thread
     g, _ = fresh()

@@ -32,6 +32,7 @@ import os
 import re
 import shutil
 import threading
+import traceback
 import urllib.request
 from datetime import datetime
 
@@ -273,9 +274,14 @@ def _store_versions(node, vs, select=None):
         _quiet[0] -= 1
 
 
-def apply_objects(node):
-    """obj_on0..7 from the Objects knob, against the current version's objects."""
-    v = _current_version(node)
+def apply_objects(node, index=None):
+    """obj_on0..7 from the Objects knob, against the objects of version `index` (default: the one picked in the
+    pulldown). show_version passes its own index, which can differ from the pulldown while it is being set."""
+    if index is None:
+        v = _current_version(node)
+    else:
+        vs = _versions(node)
+        v = vs[max(0, min(int(index), len(vs) - 1))] if vs else None
     if v is None:
         return
     chosen = set(versions.parse_objects(node["objects"].value(), v.get("objects", [])))
@@ -315,7 +321,7 @@ def show_version(node, index):
     node["stencil_frame"].setValue(int(v["key"]) if v.get("key") is not None else first)
     names = [(v.get("names") or {}).get(str(k)) if k in present else None for k in range(SLOTS)]
     crypto.apply_to_nodes(node.node("CryptoExpr"), node.node("CryptoMeta"), names)
-    apply_objects(node)
+    apply_objects(node, index)
     node["has_result"].setValue(found)
     if not found:
         _set_status(node, f"Masks not found: {folder}")
@@ -508,14 +514,35 @@ def _remaining_note(client):
     return f" {n} uploaded file{'' if n == 1 else 's'} remain in ComfyUI input/nukecomfy (ComfyUI cannot delete them)."
 
 
+def _node_gone(node):
+    """True when the node was deleted or its script closed."""
+    try:
+        node.name()
+        return False
+    except (ValueError, RuntimeError, NameError):
+        return True
+
+
+def _on_main_reporting(node, func, what, hint=""):
+    """Run `func` on the main thread. A deleted node is ignored; any other failure is printed (traceback) and shown
+    as an Error status instead of vanishing."""
+    def guarded():
+        try:
+            func()
+        except Exception as e:
+            if _node_gone(node):
+                return
+            traceback.print_exc()
+            _set_status(node, f"Error: {what} failed ({type(e).__name__}: {e}).{hint}")
+    try:
+        _on_main(guarded)
+    except Exception:
+        traceback.print_exc()
+
+
 def _finish(node, text):
     """Final status from the worker thread, through the main thread."""
-    def apply():
-        _set_status(node, text)
-    try:
-        _on_main(apply)
-    except Exception:
-        pass
+    _on_main_reporting(node, lambda: _set_status(node, text), "setting the final status")
 
 
 def _worker(node, key_name, job, resume, resume_index, prompt, cancel_event, client):
@@ -535,15 +562,8 @@ def _worker(node, key_name, job, resume, resume_index, prompt, cancel_event, cli
             _finish(node, f"Error: {type(e).__name__}: {e}.{_remaining_note(client)}")
             return
 
-        def apply():
-            try:
-                _add_result(node, job, result, resume, resume_index, client)
-            except ValueError:   # the node was deleted or the script closed during the run
-                pass
-        try:
-            _on_main(apply)
-        except Exception:
-            pass
+        _on_main_reporting(node, lambda: _add_result(node, job, result, resume, resume_index, client),
+                           "adding the version", f" The masks are in {result.get('folder')}.")
         if not result["objects"]:
             _cleanup_folder(job["folder"], resumed=resume is not None)
     finally:
