@@ -247,6 +247,7 @@ def fresh(prompt="person", mode="From key frame", key=1120, chunk=60, max_object
     g["chunk_size"].setValue(chunk)
     g["max_objects"].setValue(max_objects)
     pump.drain()
+    del messages[:]
     return g
 
 
@@ -292,6 +293,23 @@ def status(g):
 
 def mask_files(folder):
     return sorted(f for f in os.listdir(folder) if re.match(r"^obj\d\.\d+\.png$", f)) if os.path.isdir(folder) else []
+
+
+def frame_fidelity(folder, frames, slot=0):
+    """Frames whose stored V/obj<slot>.<frame>.png is not byte-identical to the spike mask of that frame. The fake serves the
+    spike bytes unchanged and the runner moves the downloaded file into place, so equality means every frame landed on the
+    right file (a shifted chunk, or a forward chunk stored reversed, shows up here)."""
+    bad = []
+    for f in frames:
+        path = "%s/obj%d.%04d.png" % (folder, slot, f)
+        try:
+            with open(path, "rb") as fh:
+                same = fh.read() == spike_png(f)
+        except OSError:
+            same = False
+        if not same:
+            bad.append(f)
+    return bad
 
 
 def reads_ready(g):
@@ -368,6 +386,14 @@ def main():
           and "Chunk 5/5 skipped" in status(g),
           "%d obj0 files, missing %s (by design: the last backward chunk [1002, 1001] has no object to seed it)" % (
               len(files), missing[:5]))
+    # fwd chunks: 1120-1179, 1179-1200; bwd chunks: 1120-1061, 1061-1002. Both sides of every boundary, the mask's first
+    # frames (1011 blank / 1012 first pixels), 1041/1042 (the spike changes there), and the ends.
+    key_frames = [1002, 1011, 1012, 1041, 1042, 1060, 1061, 1062, 1100, 1119, 1120, 1121, 1150, 1178, 1179, 1180, 1200]
+    bad = frame_fidelity(folder, key_frames)
+    check("key_frames_match_spike", not bad and v["objects"][0]["first"] == 1012 and v["objects"][0]["last"] == 1200,
+          "%d frames compared byte for byte with the spike mask of the same frame, mismatches %s; objects[0] %d-%d" % (
+              len(key_frames), bad, v["objects"][0]["first"], v["objects"][0]["last"]))
+    check("key_no_error_message", messages == [], "messages %s" % messages)
     check("key_status_done", status(g).startswith("Done") and "uploaded files remain in ComfyUI input/nukecomfy" in status(g)
           and "%d uploaded files" % len(fake.uploads) in status(g) and not os.path.exists(folder + "/_plate"),
           "status %r; fake saw %d uploads" % (status(g), len(fake.uploads)))
@@ -444,6 +470,11 @@ def main():
           and files == ["obj0.%04d.png" % f for f in range(F0, F1 + 1)] and status(g).startswith("Done"),
           "objects %s, chunks %s, label %r, %d files, detect prompt %s" % (v.get("objects"), v.get("n_chunks"),
                                                                            g["version"].value(), len(files), detect_seen))
+    # chunks: 1001-1060, 1060-1119, 1120-1178 (1119 is the previous chunk's last), 1179-1200
+    range_frames = [1001, 1011, 1012, 1041, 1042, 1059, 1060, 1061, 1100, 1118, 1119, 1120, 1121, 1178, 1179, 1180, 1200]
+    bad = frame_fidelity(v.get("folder", ""), range_frames)
+    check("range_frames_match_spike", not bad, "%d frames compared with the spike masks, mismatches %s" % (len(range_frames), bad))
+    check("range_no_error_message", messages == [], "messages %s" % messages)
     a_in = sample(g, "rgba.alpha", cx, cy, 1100)
     check("range_mode_alpha", a_in > 0.99, "alpha at the player's pixel at 1100: %.3f" % a_in)
 
@@ -506,6 +537,8 @@ def main():
               len(vs2), v2.get("partial"), v2.get("completed_chunks"), n_detect_before, n_detect_after, partial_files,
               len(files2), status(g)))
     a_res = sample(g, "rgba.alpha", cx, cy, 1100)
+    bad = frame_fidelity(first_folder, [1002, 1060, 1061, 1119, 1120, 1121, 1179, 1180, 1200])
+    check("resumed_frames_match_spike", not bad, "mismatches after cancel + resume: %s" % bad)
     check("resumed_version_shown", a_res > 0.99, "alpha at the player's pixel at 1100 after the resume: %.3f" % a_res)
 
     # ============================================================================================ server_error_midway
