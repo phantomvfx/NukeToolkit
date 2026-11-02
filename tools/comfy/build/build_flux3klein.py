@@ -20,6 +20,7 @@ HEADER = """# Flux3Klein - paint, replace or erase part of one frame through Com
 # Inputs: Source, Mask (Roto, a keyer...: pick the channel), Strokes (RGBA paint as a guide), Ref1-Ref4.
 # Needs NukeComfy on the plugin path and a ComfyUI (COMFY_URL) with ComfyUI-EXR-ACEScg, ComfyUI-PlateFit,
 # ainvfx-paintaplate and SeedVR2. Without them the group still evaluates and shows the last result.
+# SAM3Matte's alpha plugs into the Mask input (Mask channel = alpha).
 # Target: Nuke 16.1. Import with the NukeComfy menu or nuke.nodePaste(path).
 """
 

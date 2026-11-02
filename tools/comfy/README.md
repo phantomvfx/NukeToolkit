@@ -16,7 +16,7 @@ NukeComfy lives in `tools/comfy/` of the Nuke monorepo (it was previously `phant
    `NukeComfy` package. The Generate buttons in saved scripts use `import NukeComfy.python.…`,
    so don't add `tools/comfy` on its own.
 
-3. Restart Nuke. You'll now see a "NukeComfy" menu inside the top menu bar containing the tools `Flux3Klein`, `DepthAny`, `NormalCrafter` and `QwenInpaint`. They are `.nk` files (single Group snippets pasted into the script, not `.gizmo` files), so the node lives in the script itself. Scripts saved with the old `.gizmo` versions of DepthAny and NormalCrafter need those nodes replaced by the `.nk` groups (same knobs).
+3. Restart Nuke. You'll now see a "NukeComfy" menu inside the top menu bar containing the tools `Flux3Klein`, `SAM3Matte`, `DepthAny`, `NormalCrafter` and `QwenInpaint`. They are `.nk` files (single Group snippets pasted into the script, not `.gizmo` files), so the node lives in the script itself. Scripts saved with the old `.gizmo` versions of DepthAny and NormalCrafter need those nodes replaced by the `.nk` groups (same knobs).
 
    `KleinEdit` and `Flux3Edit` are retired in favour of Flux3Klein (2026-10-31). Their `.nk` files are in
    `gizmos/legacy/` (out of the menu); their Python and JSON stay, so Generate still works in scripts that contain them.
@@ -60,6 +60,71 @@ ComfyUI-SeedVR2_VideoUpscaler, and the models `flux3-image-klein-int8-convrot`, 
 `flux2-vae`, `seedvr2_ema_3b-Q4_K_M.gguf`, `ema_vae_fp16` (optionally `seedvr2_ema_7b_sharp_fp16`).
 The captions and the two-pass masked edit are adapted from AInVFX Paint a plate (Apache-2.0, see `NOTICE`).
 Test without Nuke: `L:\ComfyUIClaude\tools\flux3klein_test.py`.
+
+## SAM3Matte (object mattes, Cryptomatte and roto from SAM3)
+
+`gizmos/SAM3Matte.nk` is built by `build/build_sam3matte.py` (run it with `Nuke16.1.exe -t`); edit the script, not the
+`.nk`. It is a Group snippet: import it from the NukeComfy menu, File > Import Script or `nuke.nodePaste(path)`. It is
+not in the node toolbar. Python: `python/sam3matte.py` (Nuke side), `python/sam3matte_runner.py` (talks to ComfyUI, no
+Nuke needed), `python/sam3matte_graph.py` (the ComfyUI graphs), `python/sam3matte_roto.py` (Make Roto), plus small
+pure helpers (`sam3matte_chunks`, `_crypto`, `_hints`, `_png`, `_versions`, `_roto_core`).
+
+- **Inputs**: *Source* (the plate), *Select* (any alpha marking what to matte: a RotoPaint, a Roto, a keyer), *Stencil*
+  (any alpha marking what to leave out). Select and Stencil are read on the key frame only. *Prompt* names what to
+  find, comma separated: `person:2, ball`. `:N` is the most objects to keep for that subject. At least one of Prompt or
+  Select is needed.
+- **Mode**:
+
+  | | From key frame (default) | Whole range |
+  |---|---|---|
+  | Uses | Prompt, Select, Stencil, in any mix | Prompt only |
+  | How | SAM3 finds the objects on the key frame, then tracks them both ways | SAM3 tracks the prompt over the range in one forward pass |
+  | Objects entering later | Not found. Generate again from a later key frame | Found as they enter |
+  | `person:2` caps | Honoured | Ignored, only *Max objects* applies |
+  | Stencil | A hint (with Select it gives exclude points; with a prompt only, detected objects mostly inside it are dropped) and an optional hard cut | Hard cut only |
+
+  *Whole range* with Select connected is an error: switch to *From key frame*.
+- **Generate** renders the plate as 8-bit PNGs through the script's default display and view (what you see in the
+  Viewer, not a clipped linear encode), uploads them to ComfyUI (`/upload/image`, so any `COMFY_URL` works, no shared
+  disk), runs SAM3 and downloads one mask sequence per object. Every Generate is a new entry in *Version*. **Cancel**
+  stops after the current chunk.
+- **Outputs** (one stream): RGB is Source, untouched. `rgba.alpha` is the union of the chosen *Objects* (all, a
+  comma list of slot numbers, or object names), then *Erode*, *Blur* and, if *Hard stencil* is on, the Stencil cut out.
+  `sam.m0` to `sam.m7` are one raw mask per object (8 channels in one layer). `CryptoSAM00` plus the manifest metadata
+  let a Nuke Cryptomatte node after the Group pick objects by name. `sam.*` and `CryptoSAM00` have no erode, blur or
+  stencil. Names: `select` for the Select object, `<subject>_<n>` when the prompt has one subject, else `obj<k>`.
+- **Write Cryptomatte to disk** as a 32-bit float EXR with channels `all` and metadata `all metadata`. Half float breaks
+  the IDs, and the default metadata setting drops the `exr/cryptomatte/*` lines the Cryptomatte node needs.
+- **Make Roto** builds one animated Roto node next to the Group from the saved masks (no ComfyUI needed): one Bezier
+  shape per chosen object with a fixed point count (*Points per shape*, 32) and a key every *Key every N frames*.
+  Frames where the object is empty key the shape's opacity to 0.
+- **Flux3Klein**: SAM3Matte's alpha plugs into Flux3Klein's *Mask* input (*Mask channel* = alpha). Flux3Klein is
+  unchanged.
+- **Long and 4K shots**: SAM3 tracks at about 1024 px width (*Tracking width*) whatever the plate; only the key frame
+  goes at full size. That matched full-resolution tracking (IoU 0.995 in a test), so a 4K plate costs the same as 2K.
+  Masks come back at that size and are scaled to the plate in the Group. Shots are cut into chunks of *Chunk size*
+  frames (250). Each chunk is its own ComfyUI run that starts on the last frame of the one before and is seeded with
+  its masks, so object numbers hold. *Cancel* keeps the finished chunks as a partial version (shown as `partial`), and
+  Generate with the same settings resumes it. At most 8 objects over the whole shot.
+- **Times** (RTX 3060 12 GB): 200 frames at 2K took about 1 min 45 s of tracking; a whole run with model load and
+  saving the masks takes a few minutes. Uploading 200 PNGs to a remote ComfyUI adds to that; the status line shows
+  the progress (plate render, upload, chunk n/N).
+- **Nothing found**: if SAM3 finds no object, the status line says `Nothing found for "..."` and no version is added.
+- **Where the masks live**: `<temp>/<node>_<timestamp>/obj<k>.####.png`, 8-bit, numbered with the plate's frame
+  numbers. `<temp>` is `NUKECOMFY_TEMP` if set, else next to the script (`../prerender/airender`), as for Flux3Klein.
+  The Group reads these files, so a version works without ComfyUI. Keep the folder with the script.
+- **Left behind in ComfyUI**: ComfyUI has no API to delete uploaded inputs, so the frames stay in its
+  `input/nukecomfy*` folders. The final status line says how many files were left. Clear them by hand when needed.
+
+ComfyUI needs: core SAM3 nodes (ComfyUI v0.43 or later), the model `sam3.1_multiplex_fp16.safetensors` in
+`models/checkpoints`, ComfyUI-VideoHelperSuite (`VHS_LoadImages`) and ComfyUI-KJNodes (`ReverseImageBatch`).
+
+Tested (Nuke 16.1, ComfyUI at `127.0.0.1:8188`): the pure tests, including the runner against a fake ComfyUI server;
+the Group, the Nuke layer (Generate against a stub runner) and Make Roto in headless Nuke 16.1; the two ComfyUI graphs
+against the real server and the real model, on the 200-frame 2K test plate (`tests/live/check_sam3matte_graph.py`). A
+Cryptomatte node reading the layer was checked headless. **Not run**: the Nuke GUI (the Generate, Cancel and Make
+Roto buttons, the Cryptomatte click-picker in the Viewer), and a full Generate from Nuke against a real ComfyUI
+(live acceptance pending).
 
 ## QwenInpaint (object removal / replacement)
 
