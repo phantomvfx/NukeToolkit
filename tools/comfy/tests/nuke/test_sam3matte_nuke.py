@@ -33,6 +33,7 @@ sys.path.insert(0, ROOT + "/tools/comfy/tests")
 import fake_comfy as fc
 import sam3matte_png as png
 import sam3matte_crypto as crypto
+import sam3matte_hints as hints
 from NukeComfy.python import sam3matte as s
 
 NK = ROOT + "/tools/comfy/gizmos/SAM3Matte.nk"
@@ -393,6 +394,24 @@ def main():
     check("test_sample_input_grid", none_select is None and (cols, rows) == (48, 25) and top_ok and right_ok
           and bottom_left_ok, "unconnected %s, %dx%d, %.2fs, top %s right %s bottom-left %s" % (
               none_select, cols, rows, dt, top_ok, right_ok, bottom_left_ok))
+
+    # ------------------------------------------------------------ test_sample_input_thin_stroke
+    # A 6 px wide vertical line (x 995..1001) in grid column 23 (cell 981.3..1024, centre 1002.7): the old single sample at
+    # the cell centre misses it; the 4x4 sub-samples (x = 986.7, 997.3, 1008, 1018.7) hit it at 997.3.
+    g, _ = fresh()
+    up = alpha_node(box=[995, 200, 1001, 900])
+    g.setInput(1, up)
+    t0 = time.time()
+    grid = s.sample_input(g, 1, 1003)
+    dt = time.time() - t0
+    cols_, rows_ = hints.grid_size(W, H)
+    old = hints.sample_grid(lambda x, y: up.sample("rgba.alpha", x, y, frame=1003), W, H, cols_, rows_)
+    old_hit = sum(1 for r in old for v in r if v >= 0.5)
+    pts = hints.hint_points(grid, W, H)
+    hit = sum(1 for r in grid for v in r if v >= 0.5)
+    check("test_sample_input_thin_stroke", old_hit == 0 and hit >= 1 and len(pts) >= 1 and all(981 <= p["x"] <= 1024 for p in pts),
+          "6 px line: single sample per cell sets %d cells, 4x4 sub-samples set %d cells and give %d include points %s; "
+          "sampling a %dx%d frame (48x25 cells, 16 samples each) took %.2f s" % (old_hit, hit, len(pts), pts, W, H, dt))
 
     # ------------------------------------------------------------ job content (Select + Stencil), run to the stub
     g, _ = fresh(first=1001, last=1003, key=1002)

@@ -275,7 +275,19 @@ def main():
     check("hard_stencil", on[0] == 0 and close(on[1], off[1]) and close(on[2], off[2]) and on[3] == 0
           and off[0] > 0.99 and after_off == off,
           "off %s; on(A,A2,B,BG) %s; off again %s" % (off, on, after_off))
+    # Whole range forces the cut on: Stencil connected, hard_stencil off, mode = Whole range
+    g["mode"].setValue("Whole range")
+    rng = (S(g, "rgba.alpha", *A), S(g, "rgba.alpha", *A2), S(g, "rgba.alpha", *B), g["hard_stencil"].value())
+    g["mode"].setValue("From key frame")
+    back = (S(g, "rgba.alpha", *A), S(g, "rgba.alpha", *A2), S(g, "rgba.alpha", *B))
+    check("hard_stencil_forced_in_whole_range", rng[0] == 0 and close(rng[1], off[1]) and close(rng[2], off[2])
+          and rng[3] is False and back == off,
+          "mode Whole range, hard_stencil off: alpha at A,A2,B = %s (A must be 0); From key frame again: %s" % (rng[:3], back))
     g.setInput(2, None)
+    g["mode"].setValue("Whole range")
+    rng_unc = S(g, "rgba.alpha", *A)
+    g["mode"].setValue("From key frame")
+    check("whole_range_unconnected_stencil", rng_unc > 0.99, "Whole range, Stencil not connected: alpha at A = %.3f" % rng_unc)
     g["hard_stencil"].setValue(True)
     unc = S(g, "rgba.alpha", *A)
     g["hard_stencil"].setValue(False)

@@ -21,6 +21,7 @@ Python 3.11, stdlib + nuke only. Target Nuke 16.1.
 Tested: headless in Nuke 16.1 (tools/comfy/tests/nuke/test_sam3matte_roto.py); not tried in a GUI session.
 """
 import json
+import os
 import re
 import struct
 import time
@@ -75,7 +76,7 @@ def _plate_format(group):
     f = inp.format() if inp is not None else nuke.root().format()
     name = f.name()
     if not name:
-        name = nuke.addFormat("%d %d %s sam3matte_plate" % (f.width(), f.height(), f.pixelAspect()))
+        name = nuke.addFormat("%d %d %s sam3matte_%dx%d" % (f.width(), f.height(), f.pixelAspect(), f.width(), f.height()))
     return f.width(), f.height(), name
 
 
@@ -143,6 +144,9 @@ def make_roto(group):
         return None
     by_index = {o["index"]: o for o in objects}
     folder = str(v.get("folder", "")).replace("\\", "/")
+    if not os.path.isdir(folder):
+        _set_status(group, "Masks folder not found: %s" % folder)
+        return None
     n_pts = max(3, int(group["roto_points"].value()))
     step = max(1, int(group["roto_step"].value()))
     plate_w, plate_h, fmt_name = _plate_format(group)

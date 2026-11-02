@@ -81,7 +81,7 @@ pure helpers (`sam3matte_chunks`, `_crypto`, `_hints`, `_png`, `_versions`, `_ro
   | How | SAM3 finds the objects on the key frame, then tracks them both ways | SAM3 tracks the prompt over the range in one forward pass |
   | Objects entering later | Not found. Generate again from a later key frame | Found as they enter |
   | `person:2` caps | Honoured | Ignored, only *Max objects* applies |
-  | Stencil | A hint (with Select it gives exclude points; with a prompt only, detected objects mostly inside it are dropped) and an optional hard cut | Hard cut only |
+  | Stencil | A hint (with Select it gives exclude points; with a prompt only, detected objects mostly inside it are dropped) and an optional hard cut | Hard cut only (*Hard stencil* is always on) |
 
   *Whole range* with Select connected is an error: switch to *From key frame*.
 - **Generate** renders the plate as 8-bit PNGs through the script's default display and view (what you see in the
@@ -110,6 +110,7 @@ pure helpers (`sam3matte_chunks`, `_crypto`, `_hints`, `_png`, `_versions`, `_ro
 - **Times** (RTX 3060 12 GB): 200 frames at 2K took about 1 min 45 s of tracking; a whole run with model load and
   saving the masks takes a few minutes. Uploading 200 PNGs to a remote ComfyUI adds to that; the status line shows
   the progress (plate render, upload, chunk n/N).
+- **Limits**: the plate render runs frame by frame on Nuke's main thread before anything is uploaded, so Nuke is busy during it and *Cancel* cannot stop it (it works once the upload starts). *Make Roto* decodes the masks in pure Python, about 0.1 s per mask per object: on a long shot raise *Key every N frames*.
 - **Nothing found**: if SAM3 finds no object, the status line says `Nothing found for "..."` and no version is added.
 - **Where the masks live**: `<temp>/<node>_<timestamp>/obj<k>.####.png`, 8-bit, numbered with the plate's frame
   numbers. `<temp>` is `NUKECOMFY_TEMP` if set, else next to the script (`../prerender/airender`), as for Flux3Klein.

@@ -194,6 +194,28 @@ def main():
     st = g["status"].value()
     check("roto_no_version", r is None and not new and "no version" in st.lower(), "returned %r, status %r" % (r, st))
 
+    # ---------------------------------------------------------- roto_missing_folder
+    g = fresh()
+    missing = "D:/ComfyUI_Cache/temp/sam3matte_final/no_such_version_folder"   # never created
+    set_version(g, missing, objects_list(1))
+    r, _, new = run(g)
+    st = g["status"].value()
+    check("roto_missing_folder", r is None and not new and not nuke.allNodes("Roto") and st == "Masks folder not found: " + missing,
+          "returned %r, new nodes %s, status %r" % (r, sorted(new), st))
+
+    # ---------------------------------------------------------- roto_unnamed_format_names_include_size
+    # two unnamed Source formats of different sizes must not share a format name (the second used to reuse the first)
+    sizes = []
+    for (fw, fh) in ((640, 360), (800, 450)):
+        g = fresh()
+        g.input(0)["format"].setValue(nuke.addFormat("%d %d 1" % (fw, fh)))
+        set_version(g, VER, objects_list(1))
+        r, _, _ = run(g, roto_step=100)
+        sizes.append((r and (r.format().width(), r.format().height()), r and r.format().name()))
+    check("roto_unnamed_format_names_include_size",
+          sizes[0][0] == (640, 360) and sizes[1][0] == (800, 450) and sizes[0][1] == "sam3matte_640x360"
+          and sizes[1][1] == "sam3matte_800x450", "roto formats %s" % (sizes,))
+
     # ---------------------------------------------------------- roto_node_created / shape_count / points / keys
     g = fresh()
     g.setXYpos(300, 400)

@@ -56,6 +56,7 @@ except ImportError:  # run as bare modules (scripts)
     from sam3matte_runner import ComfyClient, NothingFound, run_job
 
 SLOTS = 8
+SUBSAMPLES = 4      # per axis, inside each Select / Stencil grid cell
 MIN_TRACK_WIDTH = 64
 
 _RUNNING = {}      # node full name -> {"thread": Thread, "cancel": Event}
@@ -251,8 +252,14 @@ def sample_input(node, input_index, frame, cols=hints.GRID_COLS):
     width, height = _source_format(node)
     cols, rows = hints.grid_size(width, height, cols)
 
+    # A thin stroke is narrower than a grid cell (about 40 px at 2K), so one sample per cell can step over it:
+    # each cell takes the max of SUBSAMPLES x SUBSAMPLES single-pixel samples spread evenly inside it.
+    cell_w, cell_h = width / float(cols), height / float(rows)
+    offsets = [((i + 0.5) / SUBSAMPLES - 0.5) for i in range(SUBSAMPLES)]
+
     def sampler(x, y):
-        return upstream.sample("rgba.alpha", x, y, frame=frame)
+        return max(upstream.sample("rgba.alpha", x + ox * cell_w, y + oy * cell_h, frame=frame)
+                   for oy in offsets for ox in offsets)
     try:
         return hints.sample_grid(sampler, width, height, cols, rows)
     except (RuntimeError, ValueError) as e:
@@ -349,7 +356,9 @@ def knob_changed(node, knob):
             apply_objects(node)
         elif name == "hard_stencil":
             if knob.value() and node.input(2) is None:
-                _set_status(node, "Hard stencil is on but the Stencil input is not connected")
+                _set_status(node, "Hard stencil is on but nothing is connected to Stencil, so nothing is cut")
+            elif not knob.value() and node["mode"].value() == "Whole range" and node.input(2) is not None:
+                _set_status(node, "Whole range always cuts the Stencil, whatever Hard stencil says")
         elif name == "source_range":
             if not knob.value() and node.input(0) is not None:   # switched off: start from the Source's range
                 first, last = _source_range(node)
