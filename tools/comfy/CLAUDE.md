@@ -98,7 +98,7 @@ behaviour. NukeComfy depends on:
   import `nuke` and fail. The runner is tested against `tests/fake_comfy.py`, a fake ComfyUI.
 - Headless Nuke: each script in `tests/nuke/` runs with
   `& "L:\Apps\Nuke16.1v4\Nuke16.1.exe" -t L:\Nuke\tools\comfy\tests\nuke\<file>.py`
-  (`test_sam3matte_group.py`, `test_sam3matte_nuke.py`, `test_sam3matte_roto.py`).
+  (`test_sam3matte_group.py`, `test_sam3matte_nuke.py`, `test_sam3matte_roto.py`, `test_sam3matte_e2e.py`: Generate through the real Group and runner against `fake_comfy.py`).
   Build the `.nk` first with `build/build_sam3matte.py`. Each prints PASS/FAIL and exits 1 on a failure.
 - Live ComfyUI: `python tools/comfy/tests/live/check_sam3matte_graph.py`. Needs the
   model and the spike plate (paths in its docstring).
