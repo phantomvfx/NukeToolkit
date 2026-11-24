@@ -42,6 +42,16 @@ needed). Workflow: `json/Flux3Klein.json`.
   object back. Then back to the crop's size: SeedVR2 (3B GGUF) when the crop is more than 1.25x the working size
   (*Upscale: Auto*), else a resize. Fit to Plate aligns it, matches colour at the edge (*Colour match*: Auto = on for
   Replace, off for Erase) and adds grain to the plate's level. Saved as a half EXR back in the plate's primaries.
+- **Write prompt (upsampler)** (off by default): BFL's FLUX 3 Klein prompt upsampler (Qwen3.5 9B,
+  `qwen3.5_9b_flux3_prompt_upsampler_w4a8` in `text_encoders`) runs first in its box-aware edit mode (`i2i_bbox`,
+  system prompt in `json/Flux3Klein_upsampler.json`). It sees the image Klein is shown (the crop, or the strokes) and
+  the refs, gets your words plus the mask box as a locked row, and writes Klein's full edit record; both passes use it.
+  The prompt it wrote shows under *Klein prompt* for each version. BFL recommends it for every Klein prompt. Tested
+  2026-11-24 on the plaque crop: Replace "a bright red enamel star emblem" went from a red-tinted plaque (plain caption)
+  to a red star on a plain plaque; Erase about the same; Strokes made a faceted gem in a brass bezel. It adds about
+  12-35 s (62 s instead of 50 s; strokes + 1 ref 85 s). The upsampler does not keep the locked box exactly (it
+  re-detects the object and renames `obj_1`); BFL's `reconcile` would restore it, but needs Python between the two
+  models and the mask limits where Klein paints anyway, so it is not done.
 - **Back in Nuke**: every result is a new entry in *Version*. The patch is placed back at the crop's position and
   keymixed over Source through the edit mask held at the generated frame, grown by *Grow* and softened by *Feather*
   (no new Generate needed). Pixels outside that mask are never changed, alpha included.
@@ -57,9 +67,12 @@ needed). Workflow: `json/Flux3Klein.json`.
 
 ComfyUI needs: ComfyUI-EXR-ACEScg, ComfyUI-PlateFit (phantomvfx), ainvfx-paintaplate (Level Fill),
 ComfyUI-SeedVR2_VideoUpscaler, and the models `flux3-image-klein-int8-convrot`, `qwen3vl_4b_int8_convrot`,
-`flux2-vae`, `seedvr2_ema_3b-Q4_K_M.gguf`, `ema_vae_fp16` (optionally `seedvr2_ema_7b_sharp_fp16`).
-The captions and the two-pass masked edit are adapted from AInVFX Paint a plate (Apache-2.0, see `NOTICE`).
-Test without Nuke: `L:\ComfyUIClaude\tools\flux3klein_test.py`.
+`flux2-vae`, `seedvr2_ema_3b-Q4_K_M.gguf`, `ema_vae_fp16` (optionally `seedvr2_ema_7b_sharp_fp16`, and
+`qwen3.5_9b_flux3_prompt_upsampler_w4a8` for *Write prompt*; ComfyUI 0.45.0 for `TextGenerateV2`).
+The captions and the two-pass masked edit are adapted from AInVFX Paint a plate (Apache-2.0, see `NOTICE`); the
+upsampler's system prompt and request format are BFL's (Apache-2.0, see `NOTICE`).
+Test without Nuke: `L:\ComfyUIClaude\tools\flux3klein_test.py` (cases `replace erase seedvr strokes`; add `+pup` for
+the upsampler, e.g. `replace+pup`).
 
 ## SAM3Matte (object mattes, Cryptomatte and roto from SAM3)
 

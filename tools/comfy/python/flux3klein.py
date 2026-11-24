@@ -148,6 +148,8 @@ def show_version(node, index):
     node["patch_y"].setValue(v["y"])
     node["patch_frame"].setValue(v["frame"])  # the comp mask is held at the frame the patch was made from
     node["has_result"].setValue(True)
+    if node.knob("caption"):  # groups built before the upsampler have no such knob
+        node["caption"].setValue(v.get("caption", ""))
 
 
 def _add_version(node, entry):
@@ -205,12 +207,16 @@ def _make_integrator(params, save_path):
             if not api_client.download_output(info["filename"], info.get("subfolder", ""), info.get("type", "output"), save_path):
                 return fail("Failed to download the result from ComfyUI")
 
+            texts = [t for out in output_data.values() for t in out.get("text", [])]  # NUKE_CAPTION, upsampler only
+
             def apply():
                 _add_version(node, {"file": save_path, "x": params["crop_x"], "y": params["crop_y"], "frame": params["frame"],
                                     "mode": params["mode"],
-                                    "seed": params["seed"], "words": params["words"]})
+                                    "seed": params["seed"], "words": params["words"],
+                                    "caption": texts[0] if texts else ""})
                 node["show_result"].setValue(True)
-                node["status"].setValue(f"Done ({params['crop_w']}x{params['crop_h']}{', SeedVR' if params['seedvr'] else ''})")
+                extra = (", SeedVR" if params["seedvr"] else "") + (", upsampler" if params.get("upsample") else "")
+                node["status"].setValue(f"Done ({params['crop_w']}x{params['crop_h']}{extra})")
             _run_on_main_thread(apply)
         except Exception as e:
             fail(str(e))
@@ -268,6 +274,7 @@ def prepare(node):
         "seedvr_model": node["seedvr_model"].value(),
         "match_color": node["match_color"].value(),
         "grain": float(node["grain"].value()),
+        "upsample": bool(node.knob("upsample") and node["upsample"].value()),
         "crop_x": x0, "crop_y": y0, "crop_w": x1 - x0, "crop_h": y1 - y0, "frame": frame,
         "prefix": f"NukeComfy/{node.name()}",
     }

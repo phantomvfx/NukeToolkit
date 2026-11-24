@@ -53,6 +53,10 @@ def build():
     tooltip(knob(g, nuke.Multiline_Eval_String_Knob("prompt_pos", "Prompt"), "a bright red enamel star emblem"),
             "What to paint inside the mask (Replace), or what to remove (Erase, optional). Just the object: the tool "
             "writes the full instruction for Klein. Ref1 is <ref_image_1> ... Ref4 is <ref_image_4> if you use them.")
+    tooltip(knob(g, nuke.Boolean_Knob("upsample", "Write prompt (upsampler)"), False),
+            "BFL's prompt upsampler (a 9B model) looks at the crop, the strokes and the refs and writes Klein's full "
+            "edit prompt around your words and the mask box. BFL recommends it for every prompt. Adds about 20-40 s; "
+            "the prompt it wrote shows under Klein prompt.")
     tooltip(knob(g, nuke.Link_Knob("mask_channel", "Mask channel")), "Channel of the Mask input that marks the edit (white = edit).")
     g["mask_channel"].setLink("MaskSel.from0")
     knob(g, nuke.Int_Knob("seed", "Seed"), 7)
@@ -66,6 +70,8 @@ def build():
     knob(g, nuke.Boolean_Knob("show_result", "Show result"), True, STARTLINE=False)
     tooltip(knob(g, nuke.Enumeration_Knob("version", "Version", [" "])), "Every Generate adds a version; pick the one to show.")
     knob(g, nuke.String_Knob("status", "Status"), "Idle")
+    tooltip(knob(g, nuke.Multiline_Eval_String_Knob("caption", "Klein prompt"), "", DISABLED=True),
+            "The prompt the upsampler wrote for the version shown (empty when Write prompt was off).")
     for name in ("has_result",):
         knob(g, nuke.Boolean_Knob(name, ""), False, INVISIBLE=True)
     knob(g, nuke.String_Knob("versions_data", ""), "[]", INVISIBLE=True)

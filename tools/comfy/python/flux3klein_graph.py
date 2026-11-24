@@ -12,6 +12,7 @@ import math
 import os
 
 TEMPLATE = os.path.join(os.path.dirname(os.path.dirname(__file__)), "json", "Flux3Klein.json")
+UPSAMPLER_PROMPTS = os.path.join(os.path.dirname(TEMPLATE), "Flux3Klein_upsampler.json")
 
 COLOR_SPACES = {  # knob value -> (Load EXR color_space, Save EXR color_space)
     "ACEScg": ("Convert ACEScg to Linear sRGB", "Convert Linear sRGB to ACEScg"),
@@ -24,17 +25,24 @@ QUICK_MP = 0.6  # Paint a plate's quick pass is 768 on the long side
 REFINE_STEPS = 8
 QUICK_REF_MP = 0.4
 
+# BFL's prompt upsampler (flux-3-image-klein-pup, Qwen3.5 9B, Apache-2.0) in Comfy-Org's w4a8 file, run by core
+# TextGenerateV2. Its i2i_bbox mode takes the mask box as a locked row and writes Klein's edit record around it.
+UPSAMPLER_MODEL = "qwen3.5_9b_flux3_prompt_upsampler_w4a8.safetensors"
+UPSAMPLER_MP = {1: 1.0, 2: 0.52, 3: 0.26}  # what BFL shows it: 1 MP for one image, 724^2 for two, 512^2 for 3 or more
+LOCKED = ("LOCKED BOUNDING-BOX ANNOTATIONS ([y_min, x_min, y_max, x_max] on a 0-1000 canvas, with (0, 0) at the "
+          "top-left). This is an authoritative JSON list of dictionaries; preserve every supplied identity, provenance "
+          "value, null, and coordinate exactly:")
 
-def caption(mode, words, bbox, strokes=False):
-    """Klein's edit caption with its one-row object table. bbox: [y_min, x_min, y_max, x_max] on 0..1000 of the crop."""
+
+def caption_parts(mode, words, bbox, strokes=False):
+    """(instruction, row) of Klein's edit caption. bbox: [y_min, x_min, y_max, x_max] on 0..1000 of the crop."""
     words = (words or "").strip()
     bbox = [int(v) for v in bbox]
     if mode == "erase":  # Klein's removal row: the object is in the reference (src_bbox) and nowhere in the result
         text = (f"Remove {f'the {words}' if words else 'the object'} <obj_1> completely, with its shadow and its "
                 "reflection. Show the surface and the background that continue behind it, with matching detail, light, "
                 "shadows and focus. Add no new object. Keep everything else unchanged.")
-        row = {"id": "obj_1", "from": "ref_image_0", "src_bbox": bbox, "tgt_bbox": None, "desc": words or "the object to remove"}
-        return f"{text} {json.dumps([row])}"
+        return text, {"id": "obj_1", "from": "ref_image_0", "src_bbox": bbox, "tgt_bbox": None, "desc": words or "the object to remove"}
     elif strokes:
         text = (f"Replace the rough coloured drawing inside <obj_1> with {words or 'a realistic object of that shape and colour'}, "
                 "in exactly the same style, lighting, perspective and grain as the rest of the image. Keep everything else unchanged.")
@@ -43,7 +51,51 @@ def caption(mode, words, bbox, strokes=False):
         text = (f"Replace what is inside <obj_1> with {words or 'what fits the scene'}, in exactly the same style, lighting, "
                 "perspective and grain as the rest of the image. Keep everything else unchanged.")
         desc = words or "the new content"
-    return f"{text} {json.dumps([{'id': 'obj_1', 'bbox': bbox, 'desc': desc}])}"
+    return text, {"id": "obj_1", "bbox": bbox, "desc": desc}
+
+
+def caption(mode, words, bbox, strokes=False):
+    """Klein's edit caption with its one-row object table."""
+    text, row = caption_parts(mode, words, bbox, strokes)
+    return f"{text} {json.dumps([row])}"
+
+
+def upsampler_request(mode, words, bbox, strokes=False):
+    """The user text for the upsampler's i2i_bbox mode (BFL flux3/pup.py I2I_SCAFFOLD + flux3/bbox.py
+    upsampling_input). The mask box goes in as a locked edit row: an erase keeps its src_bbox row, new content is a
+    "target" row with a tgt_bbox."""
+    text, row = caption_parts(mode, words, bbox, strokes)
+    if "bbox" in row:
+        row = {"id": row["id"], "from": "target", "src_bbox": None, "tgt_bbox": row["bbox"], "desc": row["desc"]}
+    request = f"ORIGINAL PROMPT:\n{text}\n\n{LOCKED}\n{json.dumps([row], ensure_ascii=False)}"
+    return ("Reference images follow in attachment order: ref_image_0, ref_image_1, ...\n"
+            f"User editing instruction: {request}\n"
+            "Decide the edit, imagine the target image, and output the annotation record.")
+
+
+def _add_upsampler(wf, p, images):
+    """Puts the upsampler in front of NUKE_PROMPT. images: links in reference order (ref_image_0 first)."""
+    with open(UPSAMPLER_PROMPTS, encoding="utf-8") as f:
+        system = json.load(f)["i2i_bbox"]
+    mp = UPSAMPLER_MP[min(len(images), 3)]
+    wf["100"] = {"class_type": "CLIPLoader", "_meta": {"title": "Load prompt upsampler"},
+                 "inputs": {"clip_name": UPSAMPLER_MODEL, "type": "flux3", "device": "default"}}
+    wf["101"] = {"class_type": "PrimitiveStringMultiline", "_meta": {"title": "Upsampler system prompt (BFL i2i_bbox)"},
+                 "inputs": {"value": system}}
+    gen = {"clip": ["100", 0], "max_length": 3584, "sampling_mode": "on",
+           # BFL: greedy, top_p 0.95, presence penalty 0 for edits; top_k 1 is greedy here
+           "sampling_mode.temperature": 1.0, "sampling_mode.top_k": 1, "sampling_mode.top_p": 0.95,
+           "sampling_mode.min_p": 0.0, "sampling_mode.repetition_penalty": 1.0, "sampling_mode.seed": 0,
+           "sampling_mode.presence_penalty": 0.0, "thinking": False, "use_default_template": True, "mtp": "off",
+           "system_prompt": ["101", 0],
+           "prompt": upsampler_request(p["mode"], p.get("words"), p["bbox"], strokes=bool(p.get("guide")))}
+    for i, link in enumerate(images):
+        wf[f"10{i + 2}"] = {"class_type": "ImageScaleToTotalPixels", "_meta": {"title": f"Upsampler image {i}"},
+                            "inputs": {"image": link, "upscale_method": "lanczos", "megapixels": mp, "resolution_steps": 16}}
+        gen[f"images.image{i + 1}"] = [f"10{i + 2}", 0]
+    wf["110"] = {"class_type": "TextGenerateV2", "_meta": {"title": "NUKE_UPSAMPLER"}, "inputs": gen}
+    wf["111"] = {"class_type": "PreviewAny", "_meta": {"title": "NUKE_CAPTION"}, "inputs": {"source": ["110", 0]}}
+    wf[_by_title(wf, "NUKE_PROMPT")]["inputs"]["text"] = ["110", 0]
 
 
 def use_seedvr(upscale, crop_w, crop_h, megapixels):
@@ -65,7 +117,8 @@ def build(p, template=TEMPLATE):
     """Returns the API prompt for one edit. p: dict with
     source, guide (or None), refs (list of uploaded names), color, mode ("replace"/"erase"), words, bbox,
     seed, steps, megapixels, grow, upscale ("Auto"/"SeedVR"/"Resize"), seedvr_model, crop_w, crop_h, prefix,
-    and optionally match_color ("Auto"/"On"/"Off") and grain."""
+    and optionally match_color ("Auto"/"On"/"Off"), grain and upsample (True: BFL's prompt upsampler writes the
+    caption from the request, the mask box and the images)."""
     with open(template, encoding="utf-8") as f:
         wf = json.load(f)
     wf = copy.deepcopy(wf)
@@ -118,6 +171,10 @@ def build(p, template=TEMPLATE):
                          "inputs": {"image": [load, 0], "upscale_method": "lanczos", "megapixels": mp, "resolution_steps": 16},
                          "_meta": {"title": f"Ref {i} at {mp} MP"}}
             wf[rid]["inputs"][f"images.image{i}"] = [scale, 0]
+
+    if p.get("upsample"):  # it sees what Klein's refine pass is shown first (the crop, or the strokes), then the refs
+        ref_links = [wf[refs_ids[1]]["inputs"][f"images.image{i}"] for i in range(1, len(p.get("refs", [])[:MAX_REFS]) + 1)]
+        _add_upsampler(wf, p, [edit_image] + [wf[link[0]]["inputs"]["image"] for link in ref_links])
 
     seedvr_id = _by_title(wf, "NUKE_SEEDVR")
     if use_seedvr(p["upscale"], p["crop_w"], p["crop_h"], p["megapixels"]):

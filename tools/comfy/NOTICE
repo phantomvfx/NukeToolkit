@@ -6,3 +6,9 @@ Klein edit from AInVFX Paint a plate (https://github.com/AInVFX/ainvfx-paintapla
 Copyright AInVFX, licensed under the Apache License, Version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
 Changes: ported from JavaScript to Python, crop coordinates, a replace caption for edits without strokes, both passes
 in one ComfyUI prompt, EXR in and out, Fit to Plate and SeedVR2 around it.
+
+Flux3Klein's optional prompt upsampler (json/Flux3Klein_upsampler.json and the request scaffold in
+python/flux3klein_graph.py) uses the system prompt and input format of FLUX 3 Image Klein Prompt Upsampler
+(https://huggingface.co/black-forest-labs/flux-3-image-klein-pup and
+https://github.com/black-forest-labs/flux-3-image-klein, flux3/pup.py and flux3/bbox.py), Copyright Black Forest Labs,
+licensed under the Apache License, Version 2.0. The system prompt is copied unchanged.

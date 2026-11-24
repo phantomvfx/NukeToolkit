@@ -24,6 +24,7 @@ Group {
  addUserKnob {4 mode l Mode t "Replace or add: Klein paints what the prompt describes inside the mask.\nErase: removes what is inside the mask and continues the background (the prompt can name the object)." M {"Replace or add" Erase}}
  addUserKnob {43 prompt_pos l Prompt t "What to paint inside the mask (Replace), or what to remove (Erase, optional). Just the object: the tool writes the full instruction for Klein. Ref1 is <ref_image_1> ... Ref4 is <ref_image_4> if you use them."}
  prompt_pos "a bright red enamel star emblem"
+ addUserKnob {6 upsample l "Write prompt (upsampler)" t "BFL's prompt upsampler (a 9B model) looks at the crop, the strokes and the refs and writes Klein's full edit prompt around your words and the mask box. BFL recommends it for every prompt. Adds about 20-40 s; the prompt it wrote shows under Klein prompt." -STARTLINE}
  addUserKnob {41 mask_channel l "Mask channel" t "Channel of the Mask input that marks the edit (white = edit)." T MaskSel.from0}
  addUserKnob {3 seed l Seed}
  seed 7
@@ -38,6 +39,7 @@ Group {
  addUserKnob {4 version l Version t "Every Generate adds a version; pick the one to show." M {" "}}
  addUserKnob {1 status l Status}
  status Idle
+ addUserKnob {43 caption l "Klein prompt" t "The prompt the upsampler wrote for the version shown (empty when Write prompt was off)." +DISABLED}
  addUserKnob {6 has_result l "" -STARTLINE +INVISIBLE}
  addUserKnob {1 versions_data l "" +STARTLINE +INVISIBLE}
  versions_data "\[]"
@@ -106,7 +108,7 @@ Group {
   ypos -400
   number 2
  }
-set Nf70b0900 [stack 0]
+set Nfbf92900 [stack 0]
  Input {
   inputs 0
   name Mask
@@ -114,8 +116,8 @@ set Nf70b0900 [stack 0]
   ypos -400
   number 1
  }
-set Nf70b0480 [stack 0]
-push $Nf70b0480
+set Nfbf92480 [stack 0]
+push $Nfbf92480
  Copy {
   inputs 2
   from0 rgba.alpha
@@ -135,14 +137,14 @@ push $Nf70b0480
   ypos -240
   disable {{!parent.use_strokes}}
  }
-set Nf70d0500 [stack 0]
+set Nfbfb0500 [stack 0]
  Input {
   inputs 0
   name Source
   xpos 0
   ypos -400
  }
-set Nf70b0000 [stack 0]
+set Nfbf92000 [stack 0]
  Copy {
   inputs 2
   from0 rgba.alpha
@@ -162,8 +164,8 @@ set Nf70b0000 [stack 0]
   xpos 150
   ypos -20
  }
-push $Nf70b0900
-push $Nf70b0000
+push $Nfbf92900
+push $Nfbf92000
  Merge2 {
   inputs 2
   name Guide
@@ -177,7 +179,7 @@ push $Nf70b0000
   xpos 600
   ypos -80
  }
-push $Nf70d0500
+push $Nfbfb0500
  FrameHold {
   firstFrame {{parent.patch_frame}}
   name HoldMask
@@ -213,7 +215,7 @@ push $Nf70d0500
   xpos -200
   ypos 80
  }
-push $Nf70b0000
+push $Nfbf92000
  Keymix {
   inputs 3
   channels rgb
@@ -221,7 +223,7 @@ push $Nf70b0000
   xpos 0
   ypos 180
  }
-push $Nf70b0000
+push $Nfbf92000
  Switch {
   inputs 2
   which {{"parent.show_result * parent.has_result"}}
